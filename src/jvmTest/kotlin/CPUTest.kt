@@ -1072,4 +1072,55 @@ class CPUTest {
         assertEquals(0x8177u, cpu.HL.both())
         assertEquals(0b00100000u, cpu.AF.right)
     }
+
+    @Test
+    fun `ADD-16 SP, n`() {
+        memory.set(0x100u, 0xE8u)
+        memory.set(0x101u, 0x12u)
+        cpu.stackPointer = 0x1234u
+
+        // 0x1234 + 0x12 = 0x1246
+        // Carry flag false
+        // Half carry false
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0x1246u, cpu.stackPointer)
+        assertEquals(0b00000000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `ADD-16 SP, n | Half carry`() {
+        memory.set(0x100u, 0xE8u)
+        memory.set(0x101u, 0x1Fu)
+        cpu.stackPointer = 0x1234u
+
+        // 0x1234 + 0x1F = 0x1253
+        // Carry flag false
+        // Half carry true
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0x1253u, cpu.stackPointer)
+        assertEquals(0b00100000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `ADD-16 SP, n | carry`() {
+        memory.set(0x100u, 0xE8u)
+        memory.set(0x101u, 0xF1u)
+        cpu.stackPointer = 0x1234u
+
+        // 0x1234 + 0xF1 = 0x1325
+        // Carry flag true
+        // Half carry false
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0x1325u, cpu.stackPointer)
+        assertEquals(0b00010000u, cpu.AF.right)
+    }
 }
