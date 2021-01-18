@@ -2,6 +2,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
 class CPUTest {
 
@@ -1122,5 +1123,180 @@ class CPUTest {
         assertEquals(16, cycleCount)
         assertEquals(0x1325u, cpu.stackPointer)
         assertEquals(0b00010000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `INC-16 BC`() {
+        memory.set(0x100u, 0x03u)
+        cpu.BC.setBoth(0x1234u)
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0x1235u, cpu.BC.both())
+    }
+
+    @Test
+    fun `INC-16 BC | Upper limit`() {
+        memory.set(0x100u, 0x03u)
+        cpu.BC.setBoth(0xFFFFu)
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0x0000u, cpu.BC.both())
+    }
+
+    @Test
+    fun `INC-16 BC | Split register`() {
+        memory.set(0x100u, 0x03u)
+        cpu.BC.setBoth(0x00FFu)
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0x0100u, cpu.BC.both())
+    }
+
+    @Test
+    fun `DEC-16 BC`() {
+        memory.set(0x100u, 0x0Bu)
+        cpu.BC.setBoth(0x1234u)
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0x1233u, cpu.BC.both())
+    }
+
+    @Test
+    fun `DEC-16 BC | lower limit`() {
+        memory.set(0x100u, 0x0Bu)
+        cpu.BC.setBoth(0x0000u)
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0xFFFFu, cpu.BC.both())
+    }
+
+    @Test
+    fun `DEC-16 BC | Split register`() {
+        memory.set(0x100u, 0x0Bu)
+        cpu.BC.setBoth(0x0100u)
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0x00FFu, cpu.BC.both())
+    }
+
+    @Test
+    fun `SWAP A`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x37u)
+        cpu.AF.left = 0x12u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0x21u, cpu.AF.left)
+    }
+
+    @Test
+    fun `SWAP (HL)`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x36u)
+        cpu.HL.setBoth(0x1234u)
+        memory.set(0x1234u, 0x12u)
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0x21u, memory.get(0x1234u))
+    }
+
+    @Test
+    fun `CPL A`() {
+        memory.set(0x100u, 0x2Fu)
+        cpu.AF.left = 0b11001010u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b00110101u, cpu.AF.left)
+    }
+
+    @Test
+    fun `CCF`() {
+        memory.set(0x100u, 0x3Fu)
+        cpu.AF.right = 0b0101_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SCF`() {
+        memory.set(0x100u, 0x37u)
+        cpu.AF.right = 0b0100_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b0001_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RCLA`() {
+        memory.set(0x100u, 0x07u)
+        cpu.AF.left = 0b1100_1010u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b1001_0101u, cpu.AF.left)
+        assertEquals(0b0001_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RLA`() {
+        memory.set(0x100u, 0x17u)
+        cpu.AF.left = 0b0100_1010u
+        cpu.AF.right = 0b0001_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b1001_0101u, cpu.AF.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RRCA`() {
+        memory.set(0x100u, 0x0Fu)
+        cpu.AF.left = 0b0100_1011u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b10100_101u, cpu.AF.left)
+        assertEquals(0b0001_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RRA`() {
+        memory.set(0x100u, 0x1Fu)
+        cpu.AF.left = 0b0100_1010u
+        cpu.AF.right = 0b0001_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b1010_0101u, cpu.AF.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
     }
 }

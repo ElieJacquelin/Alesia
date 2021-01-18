@@ -1,3 +1,4 @@
+@ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
 @Suppress("EXPERIMENTAL_UNSIGNED_LITERALS")
 class CPU(private val memory: Memory) {
@@ -19,107 +20,107 @@ class CPU(private val memory: Memory) {
 
     private fun decode(instruction: UByte): Int {
 
-        var cycleCount = when(instruction.toUInt()) {
+        var cycleCount = when (instruction.toUInt()) {
             // =============
             // 8-bit loads
             // ============
 
             //LD nn,n => Load into register the value at PC
-            0x06u -> op({BC.left = this.readOp() }, 8)
-            0x0Eu -> op({BC.right = this.readOp() }, 8)
-            0x16u -> op({DE.left = this.readOp() }, 8)
-            0x1Eu -> op({DE.right = this.readOp() }, 8)
-            0x26u -> op({HL.left = this.readOp() }, 8)
-            0x2Eu -> op({HL.right = this.readOp() }, 8)
+            0x06u -> op({ BC.left = this.readOp() }, 8)
+            0x0Eu -> op({ BC.right = this.readOp() }, 8)
+            0x16u -> op({ DE.left = this.readOp() }, 8)
+            0x1Eu -> op({ DE.right = this.readOp() }, 8)
+            0x26u -> op({ HL.left = this.readOp() }, 8)
+            0x2Eu -> op({ HL.right = this.readOp() }, 8)
 
             //LD r1, r2 => Load into r1 the value in r2
             // A register
-            0x7Fu -> op({AF.left = AF.left}, 4)
-            0x78u -> op({AF.left = BC.left}, 4)
-            0x79u -> op({AF.left = BC.right}, 4)
-            0x7Au -> op({AF.left = DE.left}, 4)
-            0x7Bu -> op({AF.left = DE.right}, 4)
-            0x7Cu -> op({AF.left = HL.left}, 4)
-            0x7Du -> op({AF.left = HL.right}, 4)
-            0x0Au -> op({AF.left = memory.get(BC.both())}, 8)
-            0x1Au -> op({AF.left = memory.get(DE.both())}, 8)
-            0x7Eu -> op({AF.left = memory.get(HL.both())}, 8)
-            0xFAu -> op({AF.left = memory.get(readNN())}, 16)
-            0x3Eu -> op({AF.left = readOp()}, 8)
+            0x7Fu -> op({ AF.left = AF.left }, 4)
+            0x78u -> op({ AF.left = BC.left }, 4)
+            0x79u -> op({ AF.left = BC.right }, 4)
+            0x7Au -> op({ AF.left = DE.left }, 4)
+            0x7Bu -> op({ AF.left = DE.right }, 4)
+            0x7Cu -> op({ AF.left = HL.left }, 4)
+            0x7Du -> op({ AF.left = HL.right }, 4)
+            0x0Au -> op({ AF.left = memory.get(BC.both()) }, 8)
+            0x1Au -> op({ AF.left = memory.get(DE.both()) }, 8)
+            0x7Eu -> op({ AF.left = memory.get(HL.both()) }, 8)
+            0xFAu -> op({ AF.left = memory.get(readNN()) }, 16)
+            0x3Eu -> op({ AF.left = readOp() }, 8)
             // B register
-            0x40u -> op({BC.left = BC.left}, 4)
-            0x41u -> op({BC.left = BC.right}, 4)
-            0x42u -> op({BC.left = DE.left}, 4)
-            0x43u -> op({BC.left = DE.right}, 4)
-            0x44u -> op({BC.left = HL.left}, 4)
-            0x45u -> op({BC.left = HL.right}, 4)
-            0x46u -> op({BC.left = memory.get(HL.both())}, 8)
-            0x47u -> op({BC.left = AF.left}, 4)
+            0x40u -> op({ BC.left = BC.left }, 4)
+            0x41u -> op({ BC.left = BC.right }, 4)
+            0x42u -> op({ BC.left = DE.left }, 4)
+            0x43u -> op({ BC.left = DE.right }, 4)
+            0x44u -> op({ BC.left = HL.left }, 4)
+            0x45u -> op({ BC.left = HL.right }, 4)
+            0x46u -> op({ BC.left = memory.get(HL.both()) }, 8)
+            0x47u -> op({ BC.left = AF.left }, 4)
             // C register
-            0x48u -> op({BC.right = BC.left}, 4)
-            0x49u -> op({BC.right = BC.right}, 4)
-            0x4Au -> op({BC.right = DE.left}, 4)
-            0x4Bu -> op({BC.right = DE.right}, 4)
-            0x4Cu -> op({BC.right = HL.left}, 4)
-            0x4Du -> op({BC.right = HL.right}, 4)
-            0x4Eu -> op({BC.right = memory.get(HL.both())}, 8)
-            0x4Fu -> op({BC.right = AF.left}, 4)
+            0x48u -> op({ BC.right = BC.left }, 4)
+            0x49u -> op({ BC.right = BC.right }, 4)
+            0x4Au -> op({ BC.right = DE.left }, 4)
+            0x4Bu -> op({ BC.right = DE.right }, 4)
+            0x4Cu -> op({ BC.right = HL.left }, 4)
+            0x4Du -> op({ BC.right = HL.right }, 4)
+            0x4Eu -> op({ BC.right = memory.get(HL.both()) }, 8)
+            0x4Fu -> op({ BC.right = AF.left }, 4)
             // D register
-            0x50u -> op({DE.left = BC.left}, 4)
-            0x51u -> op({DE.left = BC.right}, 4)
-            0x52u -> op({DE.left = DE.left}, 4)
-            0x53u -> op({DE.left = DE.right}, 4)
-            0x54u -> op({DE.left = HL.left}, 4)
-            0x55u -> op({DE.left = HL.right}, 4)
-            0x56u -> op({DE.left = memory.get(HL.both())}, 8)
-            0x57u -> op({DE.left = AF.left}, 4)
+            0x50u -> op({ DE.left = BC.left }, 4)
+            0x51u -> op({ DE.left = BC.right }, 4)
+            0x52u -> op({ DE.left = DE.left }, 4)
+            0x53u -> op({ DE.left = DE.right }, 4)
+            0x54u -> op({ DE.left = HL.left }, 4)
+            0x55u -> op({ DE.left = HL.right }, 4)
+            0x56u -> op({ DE.left = memory.get(HL.both()) }, 8)
+            0x57u -> op({ DE.left = AF.left }, 4)
             // E register
-            0x58u -> op({DE.right = BC.left}, 4)
-            0x59u -> op({DE.right = BC.right}, 4)
-            0x5Au -> op({DE.right = DE.left}, 4)
-            0x5Bu -> op({DE.right = DE.right}, 4)
-            0x5Cu -> op({DE.right = HL.left}, 4)
-            0x5Du -> op({DE.right = HL.right}, 4)
-            0x5Eu -> op({DE.right = memory.get(HL.both())}, 8)
-            0x5Fu -> op({DE.right = AF.left}, 4)
+            0x58u -> op({ DE.right = BC.left }, 4)
+            0x59u -> op({ DE.right = BC.right }, 4)
+            0x5Au -> op({ DE.right = DE.left }, 4)
+            0x5Bu -> op({ DE.right = DE.right }, 4)
+            0x5Cu -> op({ DE.right = HL.left }, 4)
+            0x5Du -> op({ DE.right = HL.right }, 4)
+            0x5Eu -> op({ DE.right = memory.get(HL.both()) }, 8)
+            0x5Fu -> op({ DE.right = AF.left }, 4)
             // H register
-            0x60u -> op({HL.left = BC.left}, 4)
-            0x61u -> op({HL.left = BC.right}, 4)
-            0x62u -> op({HL.left = DE.left}, 4)
-            0x63u -> op({HL.left = DE.right}, 4)
-            0x64u -> op({HL.left = HL.left}, 4)
-            0x65u -> op({HL.left = HL.right}, 4)
-            0x66u -> op({HL.left = memory.get(HL.both())}, 8)
-            0x67u -> op({HL.left = AF.left}, 4)
+            0x60u -> op({ HL.left = BC.left }, 4)
+            0x61u -> op({ HL.left = BC.right }, 4)
+            0x62u -> op({ HL.left = DE.left }, 4)
+            0x63u -> op({ HL.left = DE.right }, 4)
+            0x64u -> op({ HL.left = HL.left }, 4)
+            0x65u -> op({ HL.left = HL.right }, 4)
+            0x66u -> op({ HL.left = memory.get(HL.both()) }, 8)
+            0x67u -> op({ HL.left = AF.left }, 4)
             // L register
-            0x68u -> op({HL.right = BC.left}, 4)
-            0x69u -> op({HL.right = BC.right}, 4)
-            0x6Au -> op({HL.right = DE.left}, 4)
-            0x6Bu -> op({HL.right = DE.right}, 4)
-            0x6Cu -> op({HL.right = HL.left}, 4)
-            0x6Du -> op({HL.right = HL.right}, 4)
-            0x6Eu -> op({HL.right = memory.get(HL.both())}, 8)
-            0x6Fu -> op({HL.right = AF.left}, 4)
+            0x68u -> op({ HL.right = BC.left }, 4)
+            0x69u -> op({ HL.right = BC.right }, 4)
+            0x6Au -> op({ HL.right = DE.left }, 4)
+            0x6Bu -> op({ HL.right = DE.right }, 4)
+            0x6Cu -> op({ HL.right = HL.left }, 4)
+            0x6Du -> op({ HL.right = HL.right }, 4)
+            0x6Eu -> op({ HL.right = memory.get(HL.both()) }, 8)
+            0x6Fu -> op({ HL.right = AF.left }, 4)
             // (HL) memory address
-            0x70u -> op({memory.set(HL.both(), BC.left)}, 8)
-            0x71u -> op({memory.set(HL.both(), BC.right)}, 8)
-            0x72u -> op({memory.set(HL.both(), DE.left)}, 8)
-            0x73u -> op({memory.set(HL.both(), DE.right)}, 8)
-            0x74u -> op({memory.set(HL.both(), HL.left)}, 8)
-            0x75u -> op({memory.set(HL.both(), HL.right)}, 8)
+            0x70u -> op({ memory.set(HL.both(), BC.left) }, 8)
+            0x71u -> op({ memory.set(HL.both(), BC.right) }, 8)
+            0x72u -> op({ memory.set(HL.both(), DE.left) }, 8)
+            0x73u -> op({ memory.set(HL.both(), DE.right) }, 8)
+            0x74u -> op({ memory.set(HL.both(), HL.left) }, 8)
+            0x75u -> op({ memory.set(HL.both(), HL.right) }, 8)
             // (HL) loads next value
-            0x36u -> op({memory.set(HL.both(), this.readOp())}, 12)
+            0x36u -> op({ memory.set(HL.both(), this.readOp()) }, 12)
 
             // LD n A => Load value of A in address n
-            0x02u -> op({memory.set(BC.both(), AF.left)},8)
-            0x12u -> op({memory.set(DE.both(), AF.left)},8)
-            0x77u -> op({memory.set(HL.both(), AF.left)},8)
-            0xEAu -> op({memory.set(readNN(), AF.left)},16)
+            0x02u -> op({ memory.set(BC.both(), AF.left) }, 8)
+            0x12u -> op({ memory.set(DE.both(), AF.left) }, 8)
+            0x77u -> op({ memory.set(HL.both(), AF.left) }, 8)
+            0xEAu -> op({ memory.set(readNN(), AF.left) }, 16)
 
             // LD A,($FF00+C)
-            0xF2u -> op({AF.left = memory.get(0xFF00u.plus(BC.right).toUShort())},8)
+            0xF2u -> op({ AF.left = memory.get(0xFF00u.plus(BC.right).toUShort()) }, 8)
             // LD ($FF00+C), A
-            0xE2u -> op({memory.set(0xFF00u.plus(BC.right).toUShort(), AF.left)},8)
+            0xE2u -> op({ memory.set(0xFF00u.plus(BC.right).toUShort(), AF.left) }, 8)
             // LD A,(HL) - DEC H
             0x3Au -> op({
                 AF.left = memory.get(HL.both())
@@ -141,22 +142,22 @@ class CPU(private val memory: Memory) {
                 HL.increment()
             }, 8)
             //  LDH (n),A
-            0xE0u -> op({memory.set(0xFF00u.plus(readOp()).toUShort(), AF.left)},12)
+            0xE0u -> op({ memory.set(0xFF00u.plus(readOp()).toUShort(), AF.left) }, 12)
             // LDH A,(n)
-            0xF0u -> op({AF.left = memory.get(0xFF00u.plus(readOp()).toUShort())},12)
+            0xF0u -> op({ AF.left = memory.get(0xFF00u.plus(readOp()).toUShort()) }, 12)
 
             // =============
             // 16-bit loads
             // ============
 
             // LD n,nn
-            0x01u -> op({BC.setBoth(readNN())},12)
-            0x11u -> op({DE.setBoth(readNN())},12)
-            0x21u -> op({HL.setBoth(readNN())},12)
-            0x31u -> op({stackPointer = readNN()},12)
+            0x01u -> op({ BC.setBoth(readNN()) }, 12)
+            0x11u -> op({ DE.setBoth(readNN()) }, 12)
+            0x21u -> op({ HL.setBoth(readNN()) }, 12)
+            0x31u -> op({ stackPointer = readNN() }, 12)
 
             // LD SP,HL
-            0xF9u -> op({stackPointer = HL.both()},8)
+            0xF9u -> op({ stackPointer = HL.both() }, 8)
             //  LDHL SP,n
             // TODO To be tested, unsure about carry flags implementation
             0xF8u -> op({
@@ -167,226 +168,226 @@ class CPU(private val memory: Memory) {
                 AF.setZeroFlag(false)
                 AF.setSubtractFlag(false)
                 AF.setSubtractFlag(false)
-                if(n >= 0) {
+                if (n >= 0) {
                     AF.setCarryFlag((result and 0xff) < (stackPointer.toInt() and 0xff)) // Check if carry by checking if the stackpointer transposed to a byte is bigger than before the operation
                     AF.setHalfCarryFlag((result and 0xf) < (stackPointer.toInt() and 0xf)) // Check if carry on the if the stackpointer transposed to 4bits is bigger than after the operation
                 } else {
                     AF.setCarryFlag((result and 0xff) > (stackPointer.toInt() and 0xff)) // Check if carry by checking if the stackpointer transposed to a byte is smaller than before the operation
                     AF.setHalfCarryFlag((result and 0xf) > (stackPointer.toInt() and 0xf)) // Check if carry on the if the stackpointer transposed to 4bits is smalelr than after the operation
                 }
-            },12)
+            }, 12)
             // LD(nn), SP
             0x08u -> op({
                 val address = readNN()
                 memory.set(address, stackPointer.getLeft())
                 memory.set(address.inc(), stackPointer.getRight())
-            },20)
+            }, 20)
             // PUSH AF
             0xF5u -> op({
                 memory.set(--stackPointer, AF.left)
                 memory.set(--stackPointer, AF.right)
-            },16)
+            }, 16)
             // PUSH BC
             0xC5u -> op({
                 memory.set(--stackPointer, BC.left)
                 memory.set(--stackPointer, BC.right)
-            },16)
+            }, 16)
             // PUSH DE
             0xD5u -> op({
                 memory.set(--stackPointer, DE.left)
                 memory.set(--stackPointer, DE.right)
-            },16)
+            }, 16)
             // PUSH HL
             0xE5u -> op({
                 memory.set(--stackPointer, HL.left)
                 memory.set(--stackPointer, HL.right)
-            },16)
+            }, 16)
             // POP AF
             0xF1u -> op({
                 AF.right = memory.get(stackPointer++)
                 AF.left = memory.get(stackPointer++)
-            },16)
+            }, 16)
             // POP BC
             0xC1u -> op({
                 BC.right = memory.get(stackPointer++)
                 BC.left = memory.get(stackPointer++)
-            },16)
+            }, 16)
             // POP DE
             0xD1u -> op({
                 DE.right = memory.get(stackPointer++)
                 DE.left = memory.get(stackPointer++)
-            },16)
+            }, 16)
             // POP HL
             0xE1u -> op({
                 HL.right = memory.get(stackPointer++)
                 HL.left = memory.get(stackPointer++)
-            },16)
+            }, 16)
 
             // 8 bit ALU
             // ADD A, A
-            0x87u -> op({addOp(AF.left)}, 4)
+            0x87u -> op({ addOp(AF.left) }, 4)
             // ADD A, B
-            0x80u -> op({addOp(BC.left)}, 4)
+            0x80u -> op({ addOp(BC.left) }, 4)
             // ADD A, C
-            0x81u -> op({addOp(BC.right)}, 4)
+            0x81u -> op({ addOp(BC.right) }, 4)
             // ADD A, D
-            0x82u -> op({addOp(DE.left)}, 4)
+            0x82u -> op({ addOp(DE.left) }, 4)
             // ADD A, E
-            0x83u -> op({addOp(DE.right)}, 4)
+            0x83u -> op({ addOp(DE.right) }, 4)
             // ADD A, H
-            0x84u -> op({addOp(HL.left)}, 4)
+            0x84u -> op({ addOp(HL.left) }, 4)
             // ADD A, L
-            0x85u -> op({addOp(HL.right)}, 4)
+            0x85u -> op({ addOp(HL.right) }, 4)
             // ADD A, (HL)
-            0x86u -> op({addOp(memory.get(HL.both()))}, 8)
+            0x86u -> op({ addOp(memory.get(HL.both())) }, 8)
             // ADD A, n
-            0xC6u -> op({addOp(readOp())}, 8)
+            0xC6u -> op({ addOp(readOp()) }, 8)
 
             // ADC A, A
-            0x8Fu -> op({addCarryOp(AF.left)}, 4)
+            0x8Fu -> op({ addCarryOp(AF.left) }, 4)
             // ADC A, B
-            0x88u -> op({addCarryOp(BC.left)}, 4)
+            0x88u -> op({ addCarryOp(BC.left) }, 4)
             // ADC A, C
-            0x89u -> op({addCarryOp(BC.right)}, 4)
+            0x89u -> op({ addCarryOp(BC.right) }, 4)
             // ADC A, D
-            0x8Au -> op({addCarryOp(DE.left)}, 4)
+            0x8Au -> op({ addCarryOp(DE.left) }, 4)
             // ADC A, E
-            0x8Bu -> op({addCarryOp(DE.right)}, 4)
+            0x8Bu -> op({ addCarryOp(DE.right) }, 4)
             // ADC A, H
-            0x8Cu -> op({addCarryOp(HL.left)}, 4)
+            0x8Cu -> op({ addCarryOp(HL.left) }, 4)
             // ADC A, L
-            0x8Du -> op({addCarryOp(HL.right)}, 4)
+            0x8Du -> op({ addCarryOp(HL.right) }, 4)
             // ADC A, (HL)
-            0x8Eu -> op({addCarryOp(memory.get(HL.both()))}, 8)
+            0x8Eu -> op({ addCarryOp(memory.get(HL.both())) }, 8)
             // ADC A, n
-            0xCEu -> op({addCarryOp(readOp())}, 8)
+            0xCEu -> op({ addCarryOp(readOp()) }, 8)
 
             // SUB A, A
-            0x97u -> op({subOp(AF.left)}, 4)
+            0x97u -> op({ subOp(AF.left) }, 4)
             // SUB A, B
-            0x90u -> op({subOp(BC.left)}, 4)
+            0x90u -> op({ subOp(BC.left) }, 4)
             // SUB A, C
-            0x91u -> op({subOp(BC.right)}, 4)
+            0x91u -> op({ subOp(BC.right) }, 4)
             // SUB A, D
-            0x92u -> op({subOp(DE.left)}, 4)
+            0x92u -> op({ subOp(DE.left) }, 4)
             // SUB A, E
-            0x93u -> op({subOp(DE.right)}, 4)
+            0x93u -> op({ subOp(DE.right) }, 4)
             // SUB A, H
-            0x94u -> op({subOp(HL.left)}, 4)
+            0x94u -> op({ subOp(HL.left) }, 4)
             // SUB A, L
-            0x95u -> op({subOp(HL.right)}, 4)
+            0x95u -> op({ subOp(HL.right) }, 4)
             // SUB A, (HLsub
-            0x96u -> op({subOp(memory.get(HL.both()))}, 8)
+            0x96u -> op({ subOp(memory.get(HL.both())) }, 8)
             // SUB A, n
-            0xD6u -> op({subOp(readOp())}, 8)
+            0xD6u -> op({ subOp(readOp()) }, 8)
 
             // SUBC A, A
-            0x9Fu -> op({subCarryOp(AF.left)}, 4)
+            0x9Fu -> op({ subCarryOp(AF.left) }, 4)
             // SUBC A, B
-            0x98u -> op({subCarryOp(BC.left)}, 4)
+            0x98u -> op({ subCarryOp(BC.left) }, 4)
             // SUBC A, C
-            0x99u -> op({subCarryOp(BC.right)}, 4)
+            0x99u -> op({ subCarryOp(BC.right) }, 4)
             // SUBC A, D
-            0x9Au -> op({subCarryOp(DE.left)}, 4)
+            0x9Au -> op({ subCarryOp(DE.left) }, 4)
             // SUBC A, E
-            0x9Bu -> op({subCarryOp(DE.right)}, 4)
+            0x9Bu -> op({ subCarryOp(DE.right) }, 4)
             // SUBC A, H
-            0x9Cu -> op({subCarryOp(HL.left)}, 4)
+            0x9Cu -> op({ subCarryOp(HL.left) }, 4)
             // SUBC A, L
-            0x9Du -> op({subCarryOp(HL.right)}, 4)
+            0x9Du -> op({ subCarryOp(HL.right) }, 4)
             // SUBC A, (HLsub
-            0x9Eu -> op({subCarryOp(memory.get(HL.both()))}, 8)
+            0x9Eu -> op({ subCarryOp(memory.get(HL.both())) }, 8)
 
             // AND A, A
-            0xA7u -> op({andOp(AF.left)}, 4)
+            0xA7u -> op({ andOp(AF.left) }, 4)
             // AND A, B
-            0xA0u -> op({andOp(BC.left)}, 4)
+            0xA0u -> op({ andOp(BC.left) }, 4)
             // AND A, C
-            0xA1u -> op({andOp(BC.right)}, 4)
+            0xA1u -> op({ andOp(BC.right) }, 4)
             // AND A, D
-            0xA2u -> op({andOp(DE.left)}, 4)
+            0xA2u -> op({ andOp(DE.left) }, 4)
             // AND A, E
-            0xA3u -> op({andOp(DE.right)}, 4)
+            0xA3u -> op({ andOp(DE.right) }, 4)
             // AND A, H
-            0xA4u -> op({andOp(HL.left)}, 4)
+            0xA4u -> op({ andOp(HL.left) }, 4)
             // AND A, L
-            0xA5u -> op({andOp(HL.right)}, 4)
+            0xA5u -> op({ andOp(HL.right) }, 4)
             // AND A, (HL)
-            0xA6u -> op({andOp(memory.get(HL.both()))}, 8)
+            0xA6u -> op({ andOp(memory.get(HL.both())) }, 8)
             // AND A, n
-            0xE6u -> op({ andOp(readOp())}, 8)
+            0xE6u -> op({ andOp(readOp()) }, 8)
 
             // OR A, A
-            0xB7u -> op({orOp(AF.left)}, 4)
+            0xB7u -> op({ orOp(AF.left) }, 4)
             // OR A, B
-            0xB0u -> op({orOp(BC.left)}, 4)
+            0xB0u -> op({ orOp(BC.left) }, 4)
             // OR A, C
-            0xB1u -> op({orOp(BC.right)}, 4)
+            0xB1u -> op({ orOp(BC.right) }, 4)
             // OR A, D
-            0xB2u -> op({orOp(DE.left)}, 4)
+            0xB2u -> op({ orOp(DE.left) }, 4)
             // OR A, E
-            0xB3u -> op({orOp(DE.right)}, 4)
+            0xB3u -> op({ orOp(DE.right) }, 4)
             // OR A, H
-            0xB4u -> op({orOp(HL.left)}, 4)
+            0xB4u -> op({ orOp(HL.left) }, 4)
             // OR A, L
-            0xB5u -> op({orOp(HL.right)}, 4)
+            0xB5u -> op({ orOp(HL.right) }, 4)
             // OR A, (HL)
-            0xB6u -> op({orOp(memory.get(HL.both()))}, 8)
+            0xB6u -> op({ orOp(memory.get(HL.both())) }, 8)
             // OR A, n
-            0xF6u -> op({orOp(readOp())}, 8)
+            0xF6u -> op({ orOp(readOp()) }, 8)
 
             // XOR A, A
-            0xAFu -> op({xorOp(AF.left)}, 4)
+            0xAFu -> op({ xorOp(AF.left) }, 4)
             // XOR A, B
-            0xA8u -> op({xorOp(BC.left)}, 4)
+            0xA8u -> op({ xorOp(BC.left) }, 4)
             // XOR A, C
-            0xA9u -> op({xorOp(BC.right)}, 4)
+            0xA9u -> op({ xorOp(BC.right) }, 4)
             // XOR A, D
-            0xAAu -> op({xorOp(DE.left)}, 4)
+            0xAAu -> op({ xorOp(DE.left) }, 4)
             // XOR A, E
-            0xABu -> op({xorOp(DE.right)}, 4)
+            0xABu -> op({ xorOp(DE.right) }, 4)
             // XOR A, H
-            0xACu -> op({xorOp(HL.left)}, 4)
+            0xACu -> op({ xorOp(HL.left) }, 4)
             // XOR A, L
-            0xADu -> op({xorOp(HL.right)}, 4)
+            0xADu -> op({ xorOp(HL.right) }, 4)
             // XOR A, (HL)
-            0xAEu -> op({xorOp(memory.get(HL.both()))}, 8)
+            0xAEu -> op({ xorOp(memory.get(HL.both())) }, 8)
             // XOR A, n
-            0xEEu -> op({xorOp(readOp())}, 8)
+            0xEEu -> op({ xorOp(readOp()) }, 8)
 
             // CP A, A
-            0xBFu -> op({cpOp(AF.left)}, 4)
+            0xBFu -> op({ cpOp(AF.left) }, 4)
             // CP A, B
-            0xB8u -> op({cpOp(BC.left)}, 4)
+            0xB8u -> op({ cpOp(BC.left) }, 4)
             // CP A, C
-            0xB9u -> op({cpOp(BC.right)}, 4)
+            0xB9u -> op({ cpOp(BC.right) }, 4)
             // CP A, D
-            0xBAu -> op({cpOp(DE.left)}, 4)
+            0xBAu -> op({ cpOp(DE.left) }, 4)
             // CP A, E
-            0xBBu -> op({cpOp(DE.right)}, 4)
+            0xBBu -> op({ cpOp(DE.right) }, 4)
             // CP A, H
-            0xBCu -> op({cpOp(HL.left)}, 4)
+            0xBCu -> op({ cpOp(HL.left) }, 4)
             // CP A, L
-            0xBDu -> op({cpOp(HL.right)}, 4)
+            0xBDu -> op({ cpOp(HL.right) }, 4)
             // CP A, (HL)
-            0xBEu -> op({cpOp(memory.get(HL.both()))}, 8)
+            0xBEu -> op({ cpOp(memory.get(HL.both())) }, 8)
             // CP A, n
-            0xFEu -> op({cpOp(readOp())}, 8)
+            0xFEu -> op({ cpOp(readOp()) }, 8)
 
             // INC A
-            0x3Cu -> op({incOp(AF, true)}, 4)
+            0x3Cu -> op({ incOp(AF, true) }, 4)
             // INC B
-            0x04u -> op({incOp(BC, true)}, 4)
+            0x04u -> op({ incOp(BC, true) }, 4)
             // INC C
-            0x0Cu -> op({incOp(BC, false)}, 4)
+            0x0Cu -> op({ incOp(BC, false) }, 4)
             // INC D
-            0x14u -> op({incOp(DE, true)}, 4)
+            0x14u -> op({ incOp(DE, true) }, 4)
             // INC E
-            0x1Cu -> op({incOp(DE, false)}, 4)
+            0x1Cu -> op({ incOp(DE, false) }, 4)
             // INC H
-            0x24u -> op({incOp(HL, true)}, 4)
+            0x24u -> op({ incOp(HL, true) }, 4)
             // INC L
-            0x2Cu -> op({incOp(HL, false)}, 4)
+            0x2Cu -> op({ incOp(HL, false) }, 4)
             // INC (HL)
             0x34u -> op({
                 val result = (memory.get(HL.both()) + 1u).toUByte()
@@ -401,19 +402,19 @@ class CPU(private val memory: Memory) {
             }, 12)
 
             // DEC A
-            0x3Du -> op({decOp(AF, true)}, 4)
+            0x3Du -> op({ decOp(AF, true) }, 4)
             // DEC B
-            0x05u -> op({decOp(BC, true)}, 4)
+            0x05u -> op({ decOp(BC, true) }, 4)
             // DEC C
-            0x0Du -> op({decOp(BC, false)}, 4)
+            0x0Du -> op({ decOp(BC, false) }, 4)
             // DEC D
-            0x15u -> op({decOp(DE, true)}, 4)
+            0x15u -> op({ decOp(DE, true) }, 4)
             // DEC E
-            0x1Du -> op({decOp(DE, false)}, 4)
+            0x1Du -> op({ decOp(DE, false) }, 4)
             // DEC H
-            0x25u -> op({decOp(HL, true)}, 4)
+            0x25u -> op({ decOp(HL, true) }, 4)
             // DEC L
-            0x2Du -> op({decOp(HL, false)}, 4)
+            0x2Du -> op({ decOp(HL, false) }, 4)
             // DEC (HL)
             0x35u -> op({
                 val result = (memory.get(HL.both()) - 1u).toUByte()
@@ -429,24 +430,260 @@ class CPU(private val memory: Memory) {
 
             // 16 bit arithmetic
             // ADD HL, BC
-            0x09u -> op({add16Op(BC.both())}, 8)
+            0x09u -> op({ add16Op(BC.both()) }, 8)
             // ADD HL, DE
-            0x19u -> op({add16Op(DE.both())}, 8)
+            0x19u -> op({ add16Op(DE.both()) }, 8)
             // ADD HL, HL
-            0x29u -> op({add16Op(HL.both())}, 8)
+            0x29u -> op({ add16Op(HL.both()) }, 8)
             // ADD HL, SP
-            0x39u -> op({add16Op(stackPointer)}, 8)
+            0x39u -> op({ add16Op(stackPointer) }, 8)
 
             // ADD SP, n
             0xE8u -> op({
                 val number = readOp()
-                val result = number+ stackPointer
+                val result = number + stackPointer
                 AF.setNFlag(false)
                 AF.setHalfCarryFlag((stackPointer and 0x000Fu) + (number and 0x000Fu) > 0X00Fu)
                 AF.setCarryFlag((stackPointer and 0x00FFu) + (number and 0x00FFu) > 0X0FFu)
                 stackPointer = result.toUShort()
             }, 16)
 
+            // INC BC
+            0x03u -> op({ BC.increment() }, 8)
+            // INC DE
+            0x13u -> op({ DE.increment() }, 8)
+            // INC HL
+            0x23u -> op({ HL.increment() }, 8)
+            // INC SP
+            0x33u -> op({ stackPointer++ }, 8)
+
+            // DEC BC
+            0x0Bu -> op({ BC.decrement() }, 8)
+            // DEC DE
+            0x1Bu -> op({ DE.decrement() }, 8)
+            // DEC HL
+            0x2Bu -> op({ HL.decrement() }, 8)
+            // DEC SP
+            0x3Bu -> op({ stackPointer-- }, 8)
+
+
+            // Miscellaneous
+            0xCBu -> {
+                return when (readOp().toUInt()) {
+                    // SWAP A
+                    0x37u -> op({ swapOp(AF, true) }, 8)
+                    // SWAP B
+                    0x30u -> op({ swapOp(BC, true) }, 8)
+                    // SWAP C
+                    0x31u -> op({ swapOp(BC, false) }, 8)
+                    // SWAP D
+                    0x32u -> op({ swapOp(DE, true) }, 8)
+                    // SWAP E
+                    0x33u -> op({ swapOp(DE, false) }, 8)
+                    // SWAP H
+                    0x34u -> op({ swapOp(HL, true) }, 8)
+                    // SWAP L
+                    0x35u -> op({ swapOp(HL, false) }, 8)
+                    // SWAP (HL)
+                    0x36u -> op({
+                        AF.resetFlags()
+                        val number = memory.get(HL.both())
+                        val result = ((number.toUInt() shr 4) + ((number and 0xFu).toUInt() shl 4)).toUByte()
+                        memory.set(HL.both(), result)
+                        AF.setZeroFlag(result.toUInt() == 0x0u)
+                    }, 16)
+
+                    //RLC A
+                    0x07u -> op({ RLC(AF, true) }, 8)
+                    //RLC B
+                    0x00u -> op({ RLC(BC, true) }, 8)
+                    //RLC C
+                    0x01u -> op({ RLC(BC, false) }, 8)
+                    //RLC D
+                    0x02u -> op({ RLC(DE, true) }, 8)
+                    //RLC E
+                    0x03u -> op({ RLC(DE, false) }, 8)
+                    //RLC H
+                    0x04u -> op({ RLC(HL, true)},8)
+                    //RLC L
+                    0x05u -> op({ RLC(HL, false)},8)
+                    //RLC (HL)
+                    0x06u -> op({
+                        val result = memory.get(HL.both()).rotateLeft(1)
+                        memory.set(HL.both(), result)
+
+                        if(result.toUInt() == 0u) {
+                            AF.setZeroFlag(true)
+                        }
+                        AF.setNFlag(false)
+                        AF.setHalfCarryFlag(false)
+                        AF.setCarryFlag(result.toUInt() and 1u == 1u)
+                    }, 16)
+
+                    //RL A
+                    0x17u -> op({ RL(AF, true) }, 8)
+                    //RL B
+                    0x10u -> op({ RL(BC, true) }, 8)
+                    //RL C
+                    0x11u -> op({ RL(BC, false) }, 8)
+                    //RL D
+                    0x12u -> op({ RL(DE, true) }, 8)
+                    //RL E
+                    0x13u -> op({ RL(DE, false) }, 8)
+                    //RL H
+                    0x14u -> op({ RL(HL, true)},8)
+                    //RL L
+                    0x15u -> op({ RL(HL, false)},8)
+                    //RL (HL)
+                    0x16u -> op({
+                        val value = memory.get(HL.both())
+                        val newCarry = value.toUInt() and 0b1000_0000u
+                        val oldCarry = if(AF.getCarryFlag()) 1u else 0u
+
+                        val result = ((value.toUInt() shl 1) + oldCarry).toUByte()
+                        memory.set(HL.both(), result)
+                        if(result.toUInt() == 0u) {
+                            AF.setZeroFlag(true)
+                        }
+                        AF.setNFlag(false)
+                        AF.setHalfCarryFlag(false)
+                        AF.setCarryFlag(newCarry == 1u)
+                    }, 16)
+
+                    //RRC A
+                    0x0Fu -> op({ RRC(AF, true) }, 8)
+                    //RRC B
+                    0x08u -> op({ RRC(BC, true) }, 8)
+                    //RRC C
+                    0x09u -> op({ RRC(BC, false) }, 8)
+                    //RRC D
+                    0x0Au -> op({ RRC(DE, true) }, 8)
+                    //RRC E
+                    0x0Bu -> op({ RRC(DE, false) }, 8)
+                    //RRC H
+                    0x0Cu -> op({ RRC(HL, true)},8)
+                    //RRC L
+                    0x0Du -> op({ RRC(HL, false)},8)
+                    //RRC (HL)
+                    0x0Eu -> op({
+                        val result = memory.get(HL.both()).rotateRight(1)
+                        if(result.toUInt() == 0u) {
+                            AF.setZeroFlag(true)
+                        }
+                        AF.setNFlag(false)
+                        AF.setHalfCarryFlag(false)
+                        AF.setCarryFlag(result.toUInt() and 0b1000_0000u > 0u)
+                    }, 16)
+
+                    //RR A
+                    0x1Fu -> op({ RR(AF, true) }, 8)
+                    //RR B
+                    0x18u -> op({ RR(BC, true) }, 8)
+                    //RR C
+                    0x19u -> op({ RR(BC, false) }, 8)
+                    //RR D
+                    0x1Au -> op({ RR(DE, true) }, 8)
+                    //RR E
+                    0x1Bu -> op({ RR(DE, false) }, 8)
+                    //RR H
+                    0x1Cu -> op({ RR(HL, true)},8)
+                    //RR L
+                    0x1Du -> op({ RR(HL, false)},8)
+                    //RR (HL)
+                    0x1Eu -> op({
+                        val value = memory.get(HL.both())
+
+                        val newCarry = value.toUInt() and 0b0000_0001u
+                        val oldCarry = if(AF.getCarryFlag()) 0b1000_0000u else 0u
+                        val result = ((value.toUInt() shr 1) + oldCarry).toUByte()
+                        memory.set(HL.both(), result)
+
+                        if(result.toUInt() == 0u) {
+                            AF.setZeroFlag(true)
+                        }
+                        AF.setNFlag(false)
+                        AF.setHalfCarryFlag(false)
+                        AF.setCarryFlag(newCarry == 1u)
+                    }, 16)
+                    else -> throw Exception("Unknown OP instruction: $instruction")
+                }
+            }
+
+            // DAA
+            // This operation implementation mostly comes from https://ehaskins.com/2018-01-30%20Z80%20DAA/
+            // as it hard to make sense out of it
+            0x27u -> op({
+                if (!AF.getNFlag()) { // Last operation was a sum
+                    // Check if carry or result is more than 9
+                    if (AF.getHalfCarryFlag() || AF.left.toUInt() and 0x0Fu > 9u) {
+                        // Add correction to get correct binary coded decimal
+                        AF.left = (AF.left + 6u).toUByte()
+                    }
+                    // Check for carry flag or if the left digit is also higher than 9 and also need correction
+                    if (AF.getCarryFlag() || AF.left.toUInt() > 99u) {
+                        AF.left = (AF.left + 60u).toUByte()
+                        AF.setCarryFlag(true) // Should be set for some reason
+                    }
+                } else {
+                    // Checking for the flags but not for the value itself for some reason
+                    if (AF.getHalfCarryFlag()) {
+                        AF.left = (AF.left - 6u).toUByte()
+                    }
+                    if (AF.getCarryFlag()) {
+                        AF.left = (AF.left - 60u).toUByte()
+                    }
+                }
+                AF.setZeroFlag(AF.left.toUInt() == 0x0u)
+                AF.setHalfCarryFlag(false)
+            }, 4)
+
+            // CPL A
+            0x2Fu -> op({ AF.left = AF.left.inv() }, 4)
+            // CCF
+            0x3Fu -> op({
+                AF.setNFlag(false)
+                AF.setHalfCarryFlag(false)
+                AF.setCarryFlag(!AF.getCarryFlag())
+            }, 4)
+            // SCF
+            0x37u -> op({
+                AF.setNFlag(false)
+                AF.setHalfCarryFlag(false)
+                AF.setCarryFlag(true)
+            }, 4)
+            // NOP
+            0x00u -> op({}, 4)
+            // HALT
+            0x76u -> op({
+                //TODO add sleep until interrupt
+            }, 4)
+            // STOP
+            0x10u -> {
+                return when (readOp().toUInt()) {
+                    0x00u -> op({
+                        //TODO add sleep until button press
+                    }, 4)
+                    else -> throw Exception("Unknown OP instruction: $instruction")
+                }
+            }
+            //DI
+            0xF3u -> op({
+                //TODO Disable interrupts
+            }, 4)
+            //EI
+            0xFBu -> op({
+                //TODO enable interrupts
+            }, 4)
+
+            // Rotates and shifts
+            // RLCA
+            0x07u -> op({RLC(AF, true)}, 4)
+            // RLA
+            0x17u -> op({RL(AF, true)}, 4)
+            // RRCA
+            0x0Fu -> op({RRC(AF, true)}, 4)
+            // RRA
+            0x1Fu -> op({RR(AF, true)}, 4)
 
             else -> throw Exception("Unknown OP instruction: $instruction")
         }
@@ -569,85 +806,187 @@ class CPU(private val memory: Memory) {
         HL.setBoth(result.toUShort())
     }
 
-    private fun op(command: () -> Unit, cycleCount: Int): Int {
-        command()
-        return cycleCount
-    }
-
-    open class SplitRegister {
-        var left: UByte = 0u
-        var right: UByte = 0u
-
-        inline fun both(): UShort {
-            return (left.toUInt() shl 8 or right.toUInt()).toUShort()
-        }
-
-        inline fun setBoth(value: UShort) {
-            left = (value.toUInt() shr 8).toUByte()
-            right = value.toUByte()
-        }
-
-        inline fun increment() {
-            val increment = (left.toUInt() shl 8 or right.toUInt()).plus(1u)
-            right = increment.toUByte()
-            left = (increment shr 8).toUByte()
-        }
-
-        inline fun decrement() {
-            val decrement = (left.toUInt() shl 8 or right.toUInt()).minus(1u)
-            right = decrement.toUByte()
-            left = (decrement shr 8).toUByte()
-        }
-
-    }
-
-    class AFRegister: SplitRegister() {
-        inline fun resetFlags() {
-            right = 0x0000u
-        }
-
-        inline fun setZeroFlag(flag: Boolean){
-            if(flag) {
-                right = (0b10000000u or right.toUInt()).toUByte()
-            } else {
-                right = (0b01111111u and right.toUInt()).toUByte()
-            }
-        }
-
-        inline fun setNFlag(flag: Boolean){
-            if(flag) {
-                right = (0b01000000u or right.toUInt()).toUByte()
-            } else {
-                right = (0b10111111u and right.toUInt()).toUByte()
-            }
-        }
-
-        inline fun setSubtractFlag(flag: Boolean){
-            if(flag) {
-                right = (0b01000000u or right.toUInt()).toUByte()
-            } else {
-                right = (0b10111111u and right.toUInt()).toUByte()
-            }
-        }
-        inline fun setHalfCarryFlag(flag: Boolean){
-            if(flag) {
-                right = (0b00100000u or right.toUInt()).toUByte()
-            } else {
-                right = (0b11011111u and right.toUInt()).toUByte()
-            }
-        }
-
-        inline fun setCarryFlag(flag: Boolean){
-            if(flag) {
-                right = (0b00010000u or right.toUInt()).toUByte()
-            } else {
-                right = (0b11101111u and right.toUInt()).toUByte()
-            }
-        }
-
-        inline fun getCarryFlag(): Boolean {
-            return 0b00010000u and right.toUInt() > 0u
+    private inline fun swapOp(register: SplitRegister, left: Boolean) {
+        AF.resetFlags()
+        if (left) {
+            register.left = ((register.left.toUInt() shr 4) + ((register.left and 0xFu).toUInt() shl 4)).toUByte()
+            AF.setZeroFlag(register.left.toUInt() == 0x0u)
+        } else {
+            register.right = ((register.right.toUInt() shr 4) + ((register.right and 0xFu).toUInt() shl 4)).toUByte()
+            AF.setZeroFlag(register.left.toUInt() == 0x0u)
         }
     }
 
-}
+    private inline fun RLC(register: SplitRegister, left: Boolean) {
+        val result = if(left) {
+            register.left = register.left.rotateLeft(1)
+            register.left
+        } else {
+            register.right = register.right.rotateLeft(1)
+            register.right
+        }
+        if(result.toUInt() == 0u) {
+            AF.setZeroFlag(true)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(false)
+        AF.setCarryFlag(result.toUInt() and 1u == 1u)
+    }
+
+    private inline fun RRC(register: SplitRegister, left: Boolean) {
+        val result = if(left) {
+            register.left = register.left.rotateRight(1)
+            register.left
+        } else {
+            register.right = register.right.rotateRight(1)
+            register.right
+        }
+        if(result.toUInt() == 0u) {
+            AF.setZeroFlag(true)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(false)
+        AF.setCarryFlag(result.toUInt() and 0b1000_0000u > 0u)
+    }
+
+    private inline fun RL(register: SplitRegister, left: Boolean) {
+        val value = if(left) {
+            register.left
+        } else {
+            register.right
+        }
+
+        val newCarry = value.toUInt() and 0b1000_0000u
+        val oldCarry = if(AF.getCarryFlag()) 1u else 0u
+
+        val result = ((value.toUInt() shl 1) + oldCarry).toUByte()
+        if (left) {
+            register.left = result
+        } else {
+            register.right = result
+        }
+        if(result.toUInt() == 0u) {
+            AF.setZeroFlag(true)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(false)
+        AF.setCarryFlag(newCarry == 1u)
+
+    }
+
+    private inline fun RR(register: SplitRegister, left: Boolean) {
+        val value = if(left) {
+            register.left
+        } else {
+            register.right
+        }
+
+        val newCarry = value.toUInt() and 0b0000_0001u
+        val oldCarry = if(AF.getCarryFlag()) 0b1000_0000u else 0u
+        val result = ((value.toUInt() shr 1) + oldCarry).toUByte()
+        if (left) {
+            register.left = result
+        } else {
+            register.right = result
+        }
+
+        if(result.toUInt() == 0u) {
+            AF.setZeroFlag(true)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(false)
+        AF.setCarryFlag(newCarry == 1u)
+
+    }
+
+        private fun op(command: () -> Unit, cycleCount: Int): Int {
+            command()
+            return cycleCount
+        }
+
+        open class SplitRegister {
+            var left: UByte = 0u
+            var right: UByte = 0u
+
+            inline fun both(): UShort {
+                return (left.toUInt() shl 8 or right.toUInt()).toUShort()
+            }
+
+            inline fun setBoth(value: UShort) {
+                left = (value.toUInt() shr 8).toUByte()
+                right = value.toUByte()
+            }
+
+            inline fun increment() {
+                val increment = (left.toUInt() shl 8 or right.toUInt()).plus(1u)
+                right = increment.toUByte()
+                left = (increment shr 8).toUByte()
+            }
+
+            inline fun decrement() {
+                val decrement = (left.toUInt() shl 8 or right.toUInt()).minus(1u)
+                right = decrement.toUByte()
+                left = (decrement shr 8).toUByte()
+            }
+
+        }
+
+        class AFRegister : SplitRegister() {
+            inline fun resetFlags() {
+                right = 0x0000u
+            }
+
+            inline fun setZeroFlag(flag: Boolean) {
+                if (flag) {
+                    right = (0b10000000u or right.toUInt()).toUByte()
+                } else {
+                    right = (0b01111111u and right.toUInt()).toUByte()
+                }
+            }
+
+            inline fun setNFlag(flag: Boolean) {
+                if (flag) {
+                    right = (0b01000000u or right.toUInt()).toUByte()
+                } else {
+                    right = (0b10111111u and right.toUInt()).toUByte()
+                }
+            }
+
+            inline fun setSubtractFlag(flag: Boolean) {
+                if (flag) {
+                    right = (0b01000000u or right.toUInt()).toUByte()
+                } else {
+                    right = (0b10111111u and right.toUInt()).toUByte()
+                }
+            }
+
+            inline fun setHalfCarryFlag(flag: Boolean) {
+                if (flag) {
+                    right = (0b00100000u or right.toUInt()).toUByte()
+                } else {
+                    right = (0b11011111u and right.toUInt()).toUByte()
+                }
+            }
+
+            inline fun setCarryFlag(flag: Boolean) {
+                if (flag) {
+                    right = (0b00010000u or right.toUInt()).toUByte()
+                } else {
+                    right = (0b11101111u and right.toUInt()).toUByte()
+                }
+            }
+
+            inline fun getCarryFlag(): Boolean {
+                return 0b00010000u and right.toUInt() > 0u
+            }
+
+            fun getNFlag(): Boolean {
+                return 0b01000000u and right.toUInt() > 0u
+            }
+
+            fun getHalfCarryFlag(): Boolean {
+                return 0b00100000u and right.toUInt() > 0u
+            }
+        }
+
+    }
