@@ -1299,4 +1299,196 @@ class CPUTest {
         assertEquals(0b1010_0101u, cpu.AF.left)
         assertEquals(0b0000_0000u, cpu.AF.right)
     }
+
+    @Test
+    fun `SRA  | MSB 0`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x2Fu)
+        cpu.AF.left = 0b0100_1011u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0010_0101u, cpu.AF.left)
+        assertEquals(0b0001_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SRA  | MSB 1`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x2Fu)
+        cpu.AF.left = 0b1100_1010u
+        cpu.AF.right = 0b0001_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b1110_0101u, cpu.AF.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SLA  | MSB 0`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x27u)
+        cpu.AF.left = 0b0100_1011u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b1001_0110u, cpu.AF.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SLA  | MSB 1`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x27u)
+        cpu.AF.left = 0b1100_1010u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b1001_0100u, cpu.AF.left)
+        assertEquals(0b0001_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SRL`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x3Fu)
+        cpu.AF.left = 0b1100_1011u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0110_0101u, cpu.AF.left)
+        assertEquals(0b0001_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `BIT 0 B | 1`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x40u)
+        cpu.BC.left = 0b0000_0001u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0001u, cpu.BC.left)
+        assertEquals(0b1010_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `BIT 0 B | 0`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x40u)
+        cpu.BC.left = 0b0000_0000u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0000u, cpu.BC.left)
+        assertEquals(0b0010_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `BIT 7 A`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x7Fu)
+        cpu.AF.left = 0b1000_0000u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b1000_0000u, cpu.AF.left)
+        assertEquals(0b1010_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SET 0 B | 1`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0xC0u)
+        cpu.BC.left = 0b0000_0001u
+        cpu.AF.right = 0b1010_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0001u, cpu.BC.left)
+        assertEquals(0b1010_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SET 0 B | 0`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0xC0u)
+        cpu.BC.left = 0b0000_0000u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0001u, cpu.BC.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SET 7 A`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0xFFu)
+        cpu.AF.left = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b1000_0000u, cpu.AF.left)
+    }
+
+    @Test
+    fun `RES 0 B | 1`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x80u)
+        cpu.BC.left = 0b0000_0001u
+        cpu.AF.right = 0b1010_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0000u, cpu.BC.left)
+        assertEquals(0b1010_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RES 0 B | 0`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x80u)
+        cpu.BC.left = 0b0000_0000u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0000u, cpu.BC.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RES 7 A`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0xBFu)
+        cpu.AF.left = 0b1000_0000u
+
+        val cycleCount = cpu.fetch()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0000u, cpu.AF.left)
+    }
 }

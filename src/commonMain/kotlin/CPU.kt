@@ -504,15 +504,15 @@ class CPU(private val memory: Memory) {
                     //RLC E
                     0x03u -> op({ RLC(DE, false) }, 8)
                     //RLC H
-                    0x04u -> op({ RLC(HL, true)},8)
+                    0x04u -> op({ RLC(HL, true) }, 8)
                     //RLC L
-                    0x05u -> op({ RLC(HL, false)},8)
+                    0x05u -> op({ RLC(HL, false) }, 8)
                     //RLC (HL)
                     0x06u -> op({
                         val result = memory.get(HL.both()).rotateLeft(1)
                         memory.set(HL.both(), result)
 
-                        if(result.toUInt() == 0u) {
+                        if (result.toUInt() == 0u) {
                             AF.setZeroFlag(true)
                         }
                         AF.setNFlag(false)
@@ -531,18 +531,18 @@ class CPU(private val memory: Memory) {
                     //RL E
                     0x13u -> op({ RL(DE, false) }, 8)
                     //RL H
-                    0x14u -> op({ RL(HL, true)},8)
+                    0x14u -> op({ RL(HL, true) }, 8)
                     //RL L
-                    0x15u -> op({ RL(HL, false)},8)
+                    0x15u -> op({ RL(HL, false) }, 8)
                     //RL (HL)
                     0x16u -> op({
                         val value = memory.get(HL.both())
                         val newCarry = value.toUInt() and 0b1000_0000u
-                        val oldCarry = if(AF.getCarryFlag()) 1u else 0u
+                        val oldCarry = if (AF.getCarryFlag()) 1u else 0u
 
                         val result = ((value.toUInt() shl 1) + oldCarry).toUByte()
                         memory.set(HL.both(), result)
-                        if(result.toUInt() == 0u) {
+                        if (result.toUInt() == 0u) {
                             AF.setZeroFlag(true)
                         }
                         AF.setNFlag(false)
@@ -561,13 +561,13 @@ class CPU(private val memory: Memory) {
                     //RRC E
                     0x0Bu -> op({ RRC(DE, false) }, 8)
                     //RRC H
-                    0x0Cu -> op({ RRC(HL, true)},8)
+                    0x0Cu -> op({ RRC(HL, true) }, 8)
                     //RRC L
-                    0x0Du -> op({ RRC(HL, false)},8)
+                    0x0Du -> op({ RRC(HL, false) }, 8)
                     //RRC (HL)
                     0x0Eu -> op({
                         val result = memory.get(HL.both()).rotateRight(1)
-                        if(result.toUInt() == 0u) {
+                        if (result.toUInt() == 0u) {
                             AF.setZeroFlag(true)
                         }
                         AF.setNFlag(false)
@@ -586,25 +586,529 @@ class CPU(private val memory: Memory) {
                     //RR E
                     0x1Bu -> op({ RR(DE, false) }, 8)
                     //RR H
-                    0x1Cu -> op({ RR(HL, true)},8)
+                    0x1Cu -> op({ RR(HL, true) }, 8)
                     //RR L
-                    0x1Du -> op({ RR(HL, false)},8)
+                    0x1Du -> op({ RR(HL, false) }, 8)
                     //RR (HL)
                     0x1Eu -> op({
                         val value = memory.get(HL.both())
 
                         val newCarry = value.toUInt() and 0b0000_0001u
-                        val oldCarry = if(AF.getCarryFlag()) 0b1000_0000u else 0u
+                        val oldCarry = if (AF.getCarryFlag()) 0b1000_0000u else 0u
                         val result = ((value.toUInt() shr 1) + oldCarry).toUByte()
                         memory.set(HL.both(), result)
 
-                        if(result.toUInt() == 0u) {
+                        if (result.toUInt() == 0u) {
                             AF.setZeroFlag(true)
                         }
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(newCarry == 1u)
                     }, 16)
+
+                    //SLA A
+                    0x27u -> op({ SLA(AF, true) }, 8)
+                    //SLA B
+                    0x20u -> op({ SLA(BC, true) }, 8)
+                    //SLA C
+                    0x21u -> op({ SLA(BC, false) }, 8)
+                    //SLA D
+                    0x22u -> op({ SLA(DE, true) }, 8)
+                    //SLA E
+                    0x23u -> op({ SLA(DE, false) }, 8)
+                    //SLA H
+                    0x24u -> op({ SLA(HL, true) }, 8)
+                    //SLA L
+                    0x25u -> op({ SLA(HL, false) }, 8)
+                    //SLA (HL)
+                    0x26u -> op({
+                        val value = memory.get(HL.both())
+
+                        // Storing most significant bit to be stored in the carry flag
+                        val mostSignificant = value and 0b1000_0000u
+                        val result = (value.toUInt() shl 1).toUByte()
+                        memory.set(HL.both(), result)
+                        if (result.toUInt() == 0u) {
+                            AF.setZeroFlag(true)
+                        }
+                        AF.setNFlag(false)
+                        AF.setHalfCarryFlag(false)
+                        AF.setCarryFlag(mostSignificant >= 1u)
+                    }, 16)
+
+
+                    // SRA A
+                    0x2Fu -> op({ SRA(AF, true) }, 8)
+                    // SRA B
+                    0x28u -> op({ SRA(BC, true) }, 8)
+                    // SRA C
+                    0x29u -> op({ SRA(BC, false) }, 8)
+                    // SRA D
+                    0x2Au -> op({ SRA(DE, true) }, 8)
+                    // SRA E
+                    0x2Bu -> op({ SRA(DE, false) }, 8)
+                    // SRA H
+                    0x2Cu -> op({ SRA(HL, true) }, 8)
+                    // SRA L
+                    0x2Du -> op({ SRA(HL, false) }, 8)
+                    // SRA (HL)
+                    0x2Eu -> op({
+                        val value = memory.get(HL.both())
+
+                        // Arithmetic shift, the most significant bit (the sign bit) is kept when shifting
+                        // Kotlin does it by itself when using signed int but converting to and from unsigned byte breaks this
+                        val mostSignificant = value and 0b1000_0000u
+                        val result = (value.toUInt() shr 1 or mostSignificant.toUInt()).toUByte()
+                        // Storing previous bit 0 to save it in the carry
+                        val leastSignificant = value and 0b0000_0001u
+                        memory.set(HL.both(), result)
+                        if (result.toUInt() == 0u) {
+                            AF.setZeroFlag(true)
+                        }
+                        AF.setNFlag(false)
+                        AF.setHalfCarryFlag(false)
+                        AF.setCarryFlag(leastSignificant.toUInt() == 1u)
+                    }, 16)
+
+                    // SRL A
+                    0x3Fu -> op({ SRL(AF, true) }, 8)
+                    // SRL B
+                    0x38u -> op({ SRL(BC, true) }, 8)
+                    // SRL C
+                    0x39u -> op({ SRL(BC, false) }, 8)
+                    // SRL D
+                    0x3Au -> op({ SRL(DE, true) }, 8)
+                    // SRL E
+                    0x3Bu -> op({ SRL(DE, false) }, 8)
+                    // SRL H
+                    0x3Cu -> op({ SRL(HL, true) }, 8)
+                    // SRL L
+                    0x3Du -> op({ SRL(HL, false) }, 8)
+                    // SRL (HL)
+                    0x3Eu -> op({
+                        val value = memory.get(HL.both())
+
+                        // Logical shift, the most significant bit is always set to 0
+                        val result = (value.toUInt() shr 1).toUByte()
+                        // Storing previous bit 0 to save it in the carry
+                        val leastSignificant = value and 0b0000_0001u
+                        memory.set(HL.both(), result)
+                        if (result.toUInt() == 0u) {
+                            AF.setZeroFlag(true)
+                        }
+                        AF.setNFlag(false)
+                        AF.setHalfCarryFlag(false)
+                        AF.setCarryFlag(leastSignificant.toUInt() == 1u)
+                    }, 16)
+
+                    // BIT 0 B
+                    0x40u -> op({ bit(BC, true, 0) }, 8)
+                    // BIT 0 C
+                    0x41u -> op({ bit(BC, false, 0) }, 8)
+                    // BIT 0 D
+                    0x42u -> op({ bit(DE, true, 0) }, 8)
+                    // BIT 0 E
+                    0x43u -> op({ bit(DE, false, 0) }, 8)
+                    // BIT 0 H
+                    0x44u -> op({ bit(HL, true, 0) }, 8)
+                    // BIT 0 L
+                    0x45u -> op({ bit(HL, false, 0) }, 8)
+                    // BIT 0 (HL)
+                    0x46u -> op({ bitHL(0) }, 16)
+                    // BIT 0 A
+                    0x47u -> op({ bit(AF, true, 0) }, 8)
+
+                    // BIT 1 B
+                    0x48u -> op({ bit(BC, true, 1) }, 8)
+                    // BIT 1 C
+                    0x49u -> op({ bit(BC, false, 1) }, 8)
+                    // BIT 1 D
+                    0x4Au -> op({ bit(DE, true, 1) }, 8)
+                    // BIT 1 E
+                    0x4Bu -> op({ bit(DE, false, 1) }, 8)
+                    // BIT 1 H
+                    0x4Cu -> op({ bit(HL, true, 1) }, 8)
+                    // BIT 1 L
+                    0x4Du -> op({ bit(HL, false, 1) }, 8)
+                    // BIT 1 (HL)
+                    0x4Eu -> op({ bitHL(1) }, 16)
+                    // BIT 1 A
+                    0x4Fu -> op({ bit(AF, true, 1) }, 8)
+
+                    // BIT 2 B
+                    0x50u -> op({ bit(BC, true, 2) }, 8)
+                    // BIT 2 C
+                    0x51u -> op({ bit(BC, false, 2) }, 8)
+                    // BIT 2 D
+                    0x52u -> op({ bit(DE, true, 0) }, 8)
+                    // BIT 2 E
+                    0x53u -> op({ bit(DE, false, 2) }, 8)
+                    // BIT 2 H
+                    0x54u -> op({ bit(HL, true, 2) }, 8)
+                    // BIT 2 L
+                    0x55u -> op({ bit(HL, false, 2) }, 8)
+                    // BIT 2 (HL)
+                    0x56u -> op({ bitHL(2) }, 16)
+                    // BIT 2 A
+                    0x57u -> op({ bit(AF, true, 2) }, 8)
+
+                    // BIT 3 B
+                    0x58u -> op({ bit(BC, true, 3) }, 8)
+                    // BIT 3 C
+                    0x59u -> op({ bit(BC, false, 3) }, 8)
+                    // BIT 3 D
+                    0x5Au -> op({ bit(DE, true, 0) }, 8)
+                    // BIT 3 E
+                    0x5Bu -> op({ bit(DE, false, 3) }, 8)
+                    // BIT 3 H
+                    0x5Cu -> op({ bit(HL, true, 3) }, 8)
+                    // BIT 3 L
+                    0x5Du -> op({ bit(HL, false, 3) }, 8)
+                    // BIT 3 (HL)
+                    0x5Eu -> op({ bitHL(3) }, 16)
+                    // BIT 3 A
+                    0x5Fu -> op({ bit(AF, true, 3) }, 8)
+
+                    // BIT 4 B
+                    0x60u -> op({ bit(BC, true, 4) }, 8)
+                    // BIT 4 C
+                    0x61u -> op({ bit(BC, false, 4) }, 8)
+                    // BIT 4 D
+                    0x62u -> op({ bit(DE, true, 0) }, 8)
+                    // BIT 4 E
+                    0x63u -> op({ bit(DE, false, 4) }, 8)
+                    // BIT 4 H
+                    0x64u -> op({ bit(HL, true, 4) }, 8)
+                    // BIT 4 L
+                    0x65u -> op({ bit(HL, false, 4) }, 8)
+                    // BIT 4 (HL)
+                    0x66u -> op({ bitHL(4) }, 16)
+                    // BIT 4 A
+                    0x67u -> op({ bit(AF, true, 4) }, 8)
+
+                    // BIT 5 B
+                    0x68u -> op({ bit(BC, true, 5) }, 8)
+                    // BIT 5 C
+                    0x69u -> op({ bit(BC, false, 5) }, 8)
+                    // BIT 5 D
+                    0x6Au -> op({ bit(DE, true, 0) }, 8)
+                    // BIT 5 E
+                    0x6Bu -> op({ bit(DE, false, 5) }, 8)
+                    // BIT 5 H
+                    0x6Cu -> op({ bit(HL, true, 5) }, 8)
+                    // BIT 5 L
+                    0x6Du -> op({ bit(HL, false, 5) }, 8)
+                    // BIT 5 (HL)
+                    0x6Eu -> op({ bitHL(5) }, 16)
+                    // BIT 5 A
+                    0x6Fu -> op({ bit(AF, true, 5) }, 8)
+
+                    // BIT 6 B
+                    0x70u -> op({ bit(BC, true, 6) }, 8)
+                    // BIT 6 C
+                    0x71u -> op({ bit(BC, false, 6) }, 8)
+                    // BIT 6 D
+                    0x72u -> op({ bit(DE, true, 0) }, 8)
+                    // BIT 6 E
+                    0x73u -> op({ bit(DE, false, 6) }, 8)
+                    // BIT 6 H
+                    0x74u -> op({ bit(HL, true, 6) }, 8)
+                    // BIT 6 L
+                    0x75u -> op({ bit(HL, false, 6) }, 8)
+                    // BIT 6 (HL)
+                    0x76u -> op({ bitHL(6) }, 16)
+                    // BIT 6 A
+                    0x77u -> op({ bit(AF, true, 6) }, 8)
+
+                    // BIT 7 B
+                    0x78u -> op({ bit(BC, true, 7) }, 8)
+                    // BIT 7 C
+                    0x79u -> op({ bit(BC, false, 7) }, 8)
+                    // BIT 7 D
+                    0x7Au -> op({ bit(DE, true, 0) }, 8)
+                    // BIT 7 E
+                    0x7Bu -> op({ bit(DE, false, 7) }, 8)
+                    // BIT 7 H
+                    0x7Cu -> op({ bit(HL, true, 7) }, 8)
+                    // BIT 7 L
+                    0x7Du -> op({ bit(HL, false, 7) }, 8)
+                    // BIT 7 (HL)
+                    0x7Eu -> op({ bitHL(7) }, 16)
+                    // BIT 7 A
+                    0x7Fu -> op({ bit(AF, true, 7) }, 8)
+
+                    // SET 0 B
+                    0xC0u -> op({ set(BC, true, 0) }, 8)
+                    // SET 0 C
+                    0xC1u -> op({ set(BC, false, 0) }, 8)
+                    // SET 0 D
+                    0xC2u -> op({ set(DE, true, 0) }, 8)
+                    // SET 0 E
+                    0xC3u -> op({ set(DE, false, 0) }, 8)
+                    // SET 0 H
+                    0xC4u -> op({ set(HL, true, 0) }, 8)
+                    // SET 0 L
+                    0xC5u -> op({ set(HL, false, 0) }, 8)
+                    // SET 0 (HL)
+                    0xC6u -> op({ setHL(0) }, 16)
+                    // SET 0 A
+                    0xC7u -> op({ set(AF, true, 0) }, 8)
+
+                    // SET 1 B
+                    0xC8u -> op({ set(BC, true, 1) }, 8)
+                    // SET 1 C
+                    0xC9u -> op({ set(BC, false, 1) }, 8)
+                    // SET 1 D
+                    0xCAu -> op({ set(DE, true, 0) }, 8)
+                    // SET 1 E
+                    0xCBu -> op({ set(DE, false, 1) }, 8)
+                    // SET 1 H
+                    0xCCu -> op({ set(HL, true, 1) }, 8)
+                    // SET 1 L
+                    0xCDu -> op({ set(HL, false, 1) }, 8)
+                    // SET 1 (HL)
+                    0xCEu -> op({ setHL(1) }, 16)
+                    // SET 1 A
+                    0xCFu -> op({ set(AF, true, 1) }, 8)
+
+                    // SET 2 B
+                    0xD0u -> op({ set(BC, true, 2) }, 8)
+                    // SET 2 C
+                    0xD1u -> op({ set(BC, false, 2) }, 8)
+                    // SET 2 D
+                    0xD2u -> op({ set(DE, true, 0) }, 8)
+                    // SET 2 E
+                    0xD3u -> op({ set(DE, false, 2) }, 8)
+                    // SET 2 H
+                    0xD4u -> op({ set(HL, true, 2) }, 8)
+                    // SET 2 L
+                    0xD5u -> op({ set(HL, false, 2) }, 8)
+                    // SET 2 (HL)
+                    0xD6u -> op({ setHL(2) }, 16)
+                    // SET 2 A
+                    0xD7u -> op({ set(AF, true, 2) }, 8)
+
+                    // SET 3 B
+                    0xD8u -> op({ set(BC, true, 3) }, 8)
+                    // SET 3 C
+                    0xD9u -> op({ set(BC, false, 3) }, 8)
+                    // SET 3 D
+                    0xDAu -> op({ set(DE, true, 0) }, 8)
+                    // SET 3 E
+                    0xDBu -> op({ set(DE, false, 3) }, 8)
+                    // SET 3 H
+                    0xDCu -> op({ set(HL, true, 3) }, 8)
+                    // SET 3 L
+                    0xDDu -> op({ set(HL, false, 3) }, 8)
+                    // SET 3 (HL)
+                    0xDEu -> op({ setHL(3) }, 16)
+                    // SET 3 A
+                    0xDFu -> op({ set(AF, true, 3) }, 8)
+
+                    // SET 4 B
+                    0xE0u -> op({ set(BC, true, 4) }, 8)
+                    // SET 4 C
+                    0xE1u -> op({ set(BC, false, 4) }, 8)
+                    // SET 4 D
+                    0xE2u -> op({ set(DE, true, 0) }, 8)
+                    // SET 4 E
+                    0xE3u -> op({ set(DE, false, 4) }, 8)
+                    // SET 4 H
+                    0xE4u -> op({ set(HL, true, 4) }, 8)
+                    // SET 4 L
+                    0xE5u -> op({ set(HL, false, 4) }, 8)
+                    // SET 4 (HL)
+                    0xE6u -> op({ setHL(4) }, 16)
+                    // SET 4 A
+                    0xE7u -> op({ set(AF, true, 4) }, 8)
+
+                    // SET 5 B
+                    0xE8u -> op({ set(BC, true, 5) }, 8)
+                    // SET 5 C
+                    0xE9u -> op({ set(BC, false, 5) }, 8)
+                    // SET 5 D
+                    0xEAu -> op({ set(DE, true, 0) }, 8)
+                    // SET 5 E
+                    0xEBu -> op({ set(DE, false, 5) }, 8)
+                    // SET 5 H
+                    0xECu -> op({ set(HL, true, 5) }, 8)
+                    // SET 5 L
+                    0xEDu -> op({ set(HL, false, 5) }, 8)
+                    // SET 5 (HL)
+                    0xEEu -> op({ setHL(5) }, 16)
+                    // SET 5 A
+                    0xEFu -> op({ set(AF, true, 5) }, 8)
+
+                    // SET 6 B
+                    0xF0u -> op({ set(BC, true, 6) }, 8)
+                    // SET 6 C
+                    0xF1u -> op({ set(BC, false, 6) }, 8)
+                    // SET 6 D
+                    0xF2u -> op({ set(DE, true, 0) }, 8)
+                    // SET 6 E
+                    0xF3u -> op({ set(DE, false, 6) }, 8)
+                    // SET 6 H
+                    0xF4u -> op({ set(HL, true, 6) }, 8)
+                    // SET 6 L
+                    0xF5u -> op({ set(HL, false, 6) }, 8)
+                    // SET 6 (HL)
+                    0xF6u -> op({ setHL(6) }, 16)
+                    // SET 6 A
+                    0xF7u -> op({ set(AF, true, 6) }, 8)
+
+                    // SET 7 B
+                    0xF8u -> op({ set(BC, true, 7) }, 8)
+                    // SET 7 C
+                    0xF9u -> op({ set(BC, false, 7) }, 8)
+                    // SET 7 D
+                    0xFAu -> op({ set(DE, true, 0) }, 8)
+                    // SET 7 E
+                    0xFBu -> op({ set(DE, false, 7) }, 8)
+                    // SET 7 H
+                    0xFCu -> op({ set(HL, true, 7) }, 8)
+                    // SET 7 L
+                    0xFDu -> op({ set(HL, false, 7) }, 8)
+                    // SET 7 (HL)
+                    0xFEu -> op({ setHL(7) }, 16)
+                    // SET 7 A
+                    0xFFu -> op({ set(AF, true, 7) }, 8)
+
+                    // RES 0 B
+                    0x80u -> op({ reset(BC, true, 0) }, 8)
+                    // RES 0 C
+                    0x81u -> op({ reset(BC, false, 0) }, 8)
+                    // RES 0 D
+                    0x82u -> op({ reset(DE, true, 0) }, 8)
+                    // RES 0 E
+                    0x83u -> op({ reset(DE, false, 0) }, 8)
+                    // RES 0 H
+                    0x84u -> op({ reset(HL, true, 0) }, 8)
+                    // RES 0 L
+                    0x85u -> op({ reset(HL, false, 0) }, 8)
+                    // RES 0 (HL)
+                    0x86u -> op({ resetHL(0) }, 16)
+                    // RES 0 A
+                    0x87u -> op({ reset(AF, true, 0) }, 8)
+
+                    // RES 1 B
+                    0x88u -> op({ reset(BC, true, 1) }, 8)
+                    // RES 1 C
+                    0x89u -> op({ reset(BC, false, 1) }, 8)
+                    // RES 1 D
+                    0x8Au -> op({ reset(DE, true, 0) }, 8)
+                    // RES 1 E
+                    0x8Bu -> op({ reset(DE, false, 1) }, 8)
+                    // RES 1 H
+                    0x8Cu -> op({ reset(HL, true, 1) }, 8)
+                    // RES 1 L
+                    0x8Du -> op({ reset(HL, false, 1) }, 8)
+                    // RES 1 (HL)
+                    0x8Eu -> op({ resetHL(1) }, 16)
+                    // RES 1 A
+                    0x8Fu -> op({ reset(AF, true, 1) }, 8)
+
+                    // RES 2 B
+                    0x90u -> op({ reset(BC, true, 2) }, 8)
+                    // RES 2 C
+                    0x91u -> op({ reset(BC, false, 2) }, 8)
+                    // RES 2 D
+                    0x92u -> op({ reset(DE, true, 0) }, 8)
+                    // RES 2 E
+                    0x93u -> op({ reset(DE, false, 2) }, 8)
+                    // RES 2 H
+                    0x94u -> op({ reset(HL, true, 2) }, 8)
+                    // RES 2 L
+                    0x95u -> op({ reset(HL, false, 2) }, 8)
+                    // RES 2 (HL)
+                    0x96u -> op({ resetHL(2) }, 16)
+                    // RES 2 A
+                    0x97u -> op({ reset(AF, true, 2) }, 8)
+
+                    // RES 3 B
+                    0x98u -> op({ reset(BC, true, 3) }, 8)
+                    // RES 3 C
+                    0x99u -> op({ reset(BC, false, 3) }, 8)
+                    // RES 3 D
+                    0x9Au -> op({ reset(DE, true, 0) }, 8)
+                    // RES 3 E
+                    0x9Bu -> op({ reset(DE, false, 3) }, 8)
+                    // RES 3 H
+                    0x9Cu -> op({ reset(HL, true, 3) }, 8)
+                    // RES 3 L
+                    0x9Du -> op({ reset(HL, false, 3) }, 8)
+                    // RES 3 (HL)
+                    0x9Eu -> op({ resetHL(3) }, 16)
+                    // RES 3 A
+                    0x9Fu -> op({ reset(AF, true, 3) }, 8)
+
+                    // RES 4 B
+                    0xA0u -> op({ reset(BC, true, 4) }, 8)
+                    // RES 4 C
+                    0xA1u -> op({ reset(BC, false, 4) }, 8)
+                    // RES 4 D
+                    0xA2u -> op({ reset(DE, true, 0) }, 8)
+                    // RES 4 E
+                    0xA3u -> op({ reset(DE, false, 4) }, 8)
+                    // RES 4 H
+                    0xA4u -> op({ reset(HL, true, 4) }, 8)
+                    // RES 4 L
+                    0xA5u -> op({ reset(HL, false, 4) }, 8)
+                    // RES 4 (HL)
+                    0xA6u -> op({ resetHL(4) }, 16)
+                    // RES 4 A
+                    0xA7u -> op({ reset(AF, true, 4) }, 8)
+
+                    // RES 5 B
+                    0xA8u -> op({ reset(BC, true, 5) }, 8)
+                    // RES 5 C
+                    0xA9u -> op({ reset(BC, false, 5) }, 8)
+                    // RES 5 D
+                    0xAAu -> op({ reset(DE, true, 0) }, 8)
+                    // RES 5 E
+                    0xABu -> op({ reset(DE, false, 5) }, 8)
+                    // RES 5 H
+                    0xACu -> op({ reset(HL, true, 5) }, 8)
+                    // RES 5 L
+                    0xADu -> op({ reset(HL, false, 5) }, 8)
+                    // RES 5 (HL)
+                    0xAEu -> op({ resetHL(5) }, 16)
+                    // RES 5 A
+                    0xAFu -> op({ reset(AF, true, 5) }, 8)
+
+                    // RES 6 B
+                    0xB0u -> op({ reset(BC, true, 6) }, 8)
+                    // RES 6 C
+                    0xB1u -> op({ reset(BC, false, 6) }, 8)
+                    // RES 6 D
+                    0xB2u -> op({ reset(DE, true, 0) }, 8)
+                    // RES 6 E
+                    0xB3u -> op({ reset(DE, false, 6) }, 8)
+                    // RES 6 H
+                    0xB4u -> op({ reset(HL, true, 6) }, 8)
+                    // RES 6 L
+                    0xB5u -> op({ reset(HL, false, 6) }, 8)
+                    // RES 6 (HL)
+                    0xB6u -> op({ resetHL(6) }, 16)
+                    // RES 6 A
+                    0xB7u -> op({ reset(AF, true, 6) }, 8)
+
+                    // RES 7 B
+                    0xB8u -> op({reset(BC, true, 7)}, 8)
+                    // RES 7 C
+                    0xB9u -> op({reset(BC, false, 7)}, 8)
+                    // RES 7 D
+                    0xBAu -> op({reset(DE, true, 0)}, 8)
+                    // RES 7 E
+                    0xBBu -> op({reset(DE, false, 7)}, 8)
+                    // RES 7 H
+                    0xBCu -> op({reset(HL, true, 7)}, 8)
+                    // RES 7 L
+                    0xBDu -> op({reset(HL, false, 7)}, 8)
+                    // RES 7 (HL)
+                    0xBEu -> op({resetHL(7)}, 16)
+                    // RES 7 A
+                    0xBFu -> op({reset(AF, true, 7)}, 8)
+
                     else -> throw Exception("Unknown OP instruction: $instruction")
                 }
             }
@@ -897,6 +1401,137 @@ class CPU(private val memory: Memory) {
         AF.setHalfCarryFlag(false)
         AF.setCarryFlag(newCarry == 1u)
 
+    }
+
+    private inline fun SRA(register: SplitRegister, left: Boolean) {
+        val value = if(left) {
+            register.left
+        } else {
+            register.right
+        }
+
+        // Arithmetic shift, the most significant bit (the sign bit) is kept when shifting
+        // Kotlin does it by itself when using signed int but converting to and from unsigned byte breaks this
+        val mostSignificant = value and 0b1000_0000u
+        val result = (value.toUInt() shr 1 or mostSignificant.toUInt()).toUByte()
+        // Storing previous bit 0 to save it in the carry
+        val leastSignificant = value and 0b0000_0001u
+        if (left) {
+            register.left = result
+        } else {
+            register.right = result
+        }
+        if(result.toUInt() == 0u) {
+            AF.setZeroFlag(true)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(false)
+        AF.setCarryFlag(leastSignificant.toUInt() == 1u)
+    }
+
+    private inline fun SLA(register: SplitRegister, left: Boolean) {
+        val value = if(left) {
+            register.left
+        } else {
+            register.right
+        }
+
+        // Storing most significant bit to be stored in the carry flag
+        val mostSignificant = value and 0b1000_0000u
+        val result = (value.toUInt() shl 1).toUByte()
+        if (left) {
+            register.left = result
+        } else {
+            register.right = result
+        }
+        if(result.toUInt() == 0u) {
+            AF.setZeroFlag(true)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(false)
+        AF.setCarryFlag(mostSignificant >= 1u)
+    }
+
+    private inline fun SRL(register: SplitRegister, left: Boolean) {
+        val value = if(left) {
+            register.left
+        } else {
+            register.right
+        }
+
+        // Logical shift, the most significant bit is set to 0
+        val result = (value.toUInt() shr 1).toUByte()
+        // Storing previous bit 0 to save it in the carry
+        val leastSignificant = value and 0b0000_0001u
+        if (left) {
+            register.left = result
+        } else {
+            register.right = result
+        }
+        if(result.toUInt() == 0u) {
+            AF.setZeroFlag(true)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(false)
+        AF.setCarryFlag(leastSignificant.toUInt() == 1u)
+    }
+
+    private inline fun bit(value: UByte, bit: Int) {
+        if (value.toUInt() shr bit and 0x01u == 1u) {
+            AF.setZeroFlag(true)
+        } else {
+            AF.setZeroFlag(false)
+        }
+        AF.setNFlag(false)
+        AF.setHalfCarryFlag(true)
+    }
+
+    private inline fun bit(register: SplitRegister, left: Boolean, bit: Int) {
+        val value = if(left) {
+            register.left
+        } else {
+            register.right
+        }
+        bit(value, bit)
+    }
+
+    private inline fun bitHL(bit: Int) {
+        val value = memory.get(HL.both())
+        bit(value, bit)
+    }
+
+    private inline fun set(value: UByte, bit: Int): UByte {
+        return value or (1u shl bit).toUByte()
+    }
+
+    private inline fun set(register: SplitRegister, left: Boolean, bit: Int) {
+        if(left) {
+            register.left = set(register.left, bit)
+        } else {
+            register.right = set(register.left, bit)
+        }
+    }
+
+    private inline fun setHL(bit: Int) {
+         val result = set(memory.get(HL.both()), bit)
+        memory.set(HL.both(), result)
+    }
+
+    private inline fun reset(value: UByte, bit: Int): UByte {
+        return value and (1u shl bit).toUByte().inv()
+    }
+
+    private inline fun reset(register: SplitRegister, left: Boolean, bit: Int) {
+        if(left) {
+            register.left = reset(register.left, bit)
+        } else {
+            register.right = reset(register.left, bit)
+        }
+    }
+
+    private inline fun resetHL(bit: Int) {
+        val result = reset(memory.get(HL.both()), bit)
+        memory.set(HL.both(), result)
     }
 
         private fun op(command: () -> Unit, cycleCount: Int): Int {
