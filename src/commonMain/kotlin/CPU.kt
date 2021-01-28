@@ -9,8 +9,19 @@ class CPU(private val memory: Memory) {
     var BC = SplitRegister()
     var DE = SplitRegister()
     var HL = SplitRegister()
-    var stackPointer: UShort = 0xFFFEu
-    var programCounter: UShort = 0x100u
+    var stackPointer: UShort
+    var programCounter: UShort
+
+    init {
+        AF.left = 0x01u
+        AF.right = 0xB0u
+        BC.setBoth(0x0013u)
+        DE.setBoth(0x00D8u)
+        HL.setBoth(0x014Du)
+
+        stackPointer = 0xFFFEu
+        programCounter = 0x100u
+    }
 
 
     fun fetch(): Int {
@@ -1093,21 +1104,21 @@ class CPU(private val memory: Memory) {
                     0xB7u -> op({ reset(AF, true, 6) }, 8)
 
                     // RES 7 B
-                    0xB8u -> op({reset(BC, true, 7)}, 8)
+                    0xB8u -> op({ reset(BC, true, 7) }, 8)
                     // RES 7 C
-                    0xB9u -> op({reset(BC, false, 7)}, 8)
+                    0xB9u -> op({ reset(BC, false, 7) }, 8)
                     // RES 7 D
-                    0xBAu -> op({reset(DE, true, 0)}, 8)
+                    0xBAu -> op({ reset(DE, true, 0) }, 8)
                     // RES 7 E
-                    0xBBu -> op({reset(DE, false, 7)}, 8)
+                    0xBBu -> op({ reset(DE, false, 7) }, 8)
                     // RES 7 H
-                    0xBCu -> op({reset(HL, true, 7)}, 8)
+                    0xBCu -> op({ reset(HL, true, 7) }, 8)
                     // RES 7 L
-                    0xBDu -> op({reset(HL, false, 7)}, 8)
+                    0xBDu -> op({ reset(HL, false, 7) }, 8)
                     // RES 7 (HL)
-                    0xBEu -> op({resetHL(7)}, 16)
+                    0xBEu -> op({ resetHL(7) }, 16)
                     // RES 7 A
-                    0xBFu -> op({reset(AF, true, 7)}, 8)
+                    0xBFu -> op({ reset(AF, true, 7) }, 8)
 
                     else -> throw Exception("Unknown OP instruction: $instruction")
                 }
@@ -1181,22 +1192,126 @@ class CPU(private val memory: Memory) {
 
             // Rotates and shifts
             // RLCA
-            0x07u -> op({RLC(AF, true)}, 4)
+            0x07u -> op({ RLC(AF, true) }, 4)
             // RLA
-            0x17u -> op({RL(AF, true)}, 4)
+            0x17u -> op({ RL(AF, true) }, 4)
             // RRCA
-            0x0Fu -> op({RRC(AF, true)}, 4)
+            0x0Fu -> op({ RRC(AF, true) }, 4)
             // RRA
-            0x1Fu -> op({RR(AF, true)}, 4)
+            0x1Fu -> op({ RR(AF, true) }, 4)
+
+            // JP nn
+            0xC3u -> op({ jump() }, 12)
+
+            // JP NZ nn
+            0xC2u -> op({ jump { !AF.getZeroFlag() } }, 12)
+            // JP Z nn
+            0xCAu -> op({ jump { AF.getZeroFlag() } }, 12)
+            // JP NC nn
+            0xD2u -> op({ jump { !AF.getCarryFlag() } }, 12)
+            // JP C nn
+            0xDAu -> op({ jump { AF.getCarryFlag() } }, 12)
+            // JP (HL)
+            0xE9u -> op({
+                programCounter = HL.both()
+            }, 12)
+
+            // JR n
+            0x18u -> op({ jumpRelative() }, 8)
+            // JR NZ n
+            0x20u -> op({ jumpRelative { !AF.getZeroFlag() } }, 8)
+            // JR Z n
+            0x28u -> op({ jumpRelative { AF.getZeroFlag() } }, 8)
+            // JR NC n
+            0x30u -> op({ jumpRelative { !AF.getCarryFlag() } }, 8)
+            // JR C n
+            0x38u -> op({ jumpRelative { AF.getCarryFlag() } }, 8)
+
+            // CALL nn
+            0xCDu -> op({ call() }, 12)
+            // CALL NZ nn
+            0xC4u -> op({ call {!AF.getZeroFlag() } }, 12)
+            // CALL Z nn
+            0xCCu -> op({ call {AF.getZeroFlag() } }, 12)
+            // CALL NC nn
+            0xD4u -> op({ call {!AF.getCarryFlag() } }, 12)
+            // CALL C nn
+            0xDCu -> op({ call {AF.getCarryFlag() } }, 12)
+
+            // RST 00
+            0xC7u -> op({ restart(0u) }, 32)
+            // RST 08
+            0xCFu -> op({ restart(0x08u) }, 32)
+            // RST 10
+            0xD7u -> op({ restart(0x10u) }, 32)
+            // RST 18
+            0xDFu -> op({ restart(0x08u) }, 32)
+            // RST 20
+            0xE7u -> op({ restart(0x08u) }, 32)
+            // RST 28
+            0xEFu -> op({ restart(0x28u) }, 32)
+            // RST 30
+            0xF7u -> op({ restart(0x30u) }, 32)
+            // RST 38
+            0xFFu -> op({ restart(0x38u) }, 32)
+
+            // RET
+            0xC9u -> op({ `return`() }, 8)
+            // RET NZ
+            0xC0u -> op({ `return` { !AF.getZeroFlag()} }, 8)
+            // RET Z
+            0xC8u -> op({ `return` { AF.getZeroFlag()} }, 8)
+            // RET NC
+            0xD0u -> op({ `return` { !AF.getCarryFlag()} }, 8)
+            // RET C
+            0xD8u -> op({ `return` { AF.getCarryFlag()} }, 8)
+            // RETI
+            0xD9u -> op({
+                `return`()
+                //TODO handle interruption
+            }, 8)
 
             else -> throw Exception("Unknown OP instruction: $instruction")
         }
         return cycleCount
     }
 
+    private inline fun `return`(predicate: (() -> Boolean) = {true}) {
+        if (predicate.invoke()) {
+            val jumpAddressLeastSignificant = memory.get(stackPointer++)
+            val jumpAddressMostSignificant = memory.get(stackPointer++)
+            programCounter =
+                (jumpAddressMostSignificant.toUInt() shl 8 or jumpAddressLeastSignificant.toUInt()).toUShort()
+        }
+    }
+
+    private inline fun call(predicate: (() -> Boolean) = {true}) {
+        val jumpAddress = readNN()
+        if (predicate.invoke()) {
+            memory.set(--stackPointer, (programCounter.toUInt() shr 8).toUByte())
+            memory.set(--stackPointer, programCounter.toUByte())
+            programCounter = jumpAddress
+        }
+    }
+
+    private inline fun jumpRelative(predicate: (() -> Boolean) = {true}) {
+        // the next byte is read is considered signed and therefore can be a sum or a subtraction
+        val jumpAddress = (programCounter.toShort() + readOp().toByte()).toUShort()
+        if (predicate.invoke()) {
+            programCounter = jumpAddress
+        }
+    }
+
+    private inline fun jump(predicate: (() -> Boolean) = {true}) {
+        val jumpAddress = readNN()
+        if (predicate.invoke()) {
+            programCounter = jumpAddress
+        }
+    }
+
     private fun readOp() = memory.get(programCounter++)
     private fun readNN():UShort {
-        return this.readOp().concatToShort(this.readOp())
+        return (readOp().toUInt() or (readOp().toUInt() shl 8)).toUShort()
     }
 
     private inline fun addOp(number: UByte) {
@@ -1534,6 +1649,13 @@ class CPU(private val memory: Memory) {
         memory.set(HL.both(), result)
     }
 
+    private inline fun restart(newAddress: UShort) {
+        memory.set(--stackPointer, (programCounter.toUInt() shr 8 ).toUByte())
+        memory.set(--stackPointer, programCounter.toUByte())
+
+        programCounter = newAddress
+    }
+
         private fun op(command: () -> Unit, cycleCount: Int): Int {
             command()
             return cycleCount
@@ -1573,54 +1695,58 @@ class CPU(private val memory: Memory) {
 
             inline fun setZeroFlag(flag: Boolean) {
                 if (flag) {
-                    right = (0b10000000u or right.toUInt()).toUByte()
+                    right = (0b1000_0000u or right.toUInt()).toUByte()
                 } else {
-                    right = (0b01111111u and right.toUInt()).toUByte()
+                    right = (0b0111_1111u and right.toUInt()).toUByte()
                 }
             }
 
             inline fun setNFlag(flag: Boolean) {
                 if (flag) {
-                    right = (0b01000000u or right.toUInt()).toUByte()
+                    right = (0b0100_0000u or right.toUInt()).toUByte()
                 } else {
-                    right = (0b10111111u and right.toUInt()).toUByte()
+                    right = (0b1011_1111u and right.toUInt()).toUByte()
                 }
             }
 
             inline fun setSubtractFlag(flag: Boolean) {
                 if (flag) {
-                    right = (0b01000000u or right.toUInt()).toUByte()
+                    right = (0b0100_0000u or right.toUInt()).toUByte()
                 } else {
-                    right = (0b10111111u and right.toUInt()).toUByte()
+                    right = (0b1011_1111u and right.toUInt()).toUByte()
                 }
             }
 
             inline fun setHalfCarryFlag(flag: Boolean) {
                 if (flag) {
-                    right = (0b00100000u or right.toUInt()).toUByte()
+                    right = (0b0010_0000u or right.toUInt()).toUByte()
                 } else {
-                    right = (0b11011111u and right.toUInt()).toUByte()
+                    right = (0b1101_1111u and right.toUInt()).toUByte()
                 }
             }
 
             inline fun setCarryFlag(flag: Boolean) {
                 if (flag) {
-                    right = (0b00010000u or right.toUInt()).toUByte()
+                    right = (0b0001_0000u or right.toUInt()).toUByte()
                 } else {
-                    right = (0b11101111u and right.toUInt()).toUByte()
+                    right = (0b1110_1111u and right.toUInt()).toUByte()
                 }
             }
 
             inline fun getCarryFlag(): Boolean {
-                return 0b00010000u and right.toUInt() > 0u
+                return 0b0001_0000u and right.toUInt() > 0u
             }
 
             fun getNFlag(): Boolean {
-                return 0b01000000u and right.toUInt() > 0u
+                return 0b0100_0000u and right.toUInt() > 0u
             }
 
             fun getHalfCarryFlag(): Boolean {
-                return 0b00100000u and right.toUInt() > 0u
+                return 0b0010_0000u and right.toUInt() > 0u
+            }
+
+            fun getZeroFlag(): Boolean {
+                return 0b1000_0000u and right.toUInt() > 0u
             }
         }
 
