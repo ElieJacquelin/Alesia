@@ -12,6 +12,8 @@ class CPU(private val memory: Memory) {
     var stackPointer: UShort
     var programCounter: UShort
 
+    var interruptMasterEnabled: Boolean = false
+
     init {
         AF.left = 0x01u
         AF.right = 0xB0u
@@ -26,11 +28,48 @@ class CPU(private val memory: Memory) {
 
     fun fetch(): Int {
         val instruction = this.readOp()
-        return decode(instruction)
+        val (cycleCount, actionAfterInstruction) = decodeAndExecute(instruction)
+        handleInterrupts()
+        actionAfterInstruction?.invoke()
+        return cycleCount
     }
 
-    private fun decode(instruction: UByte): Int {
+    private fun handleInterrupts() {
+        //TODO add wait when interrupt master or interrupt enabled isn't set yet
 
+        // Check if VBLANK is enabled and requested
+        if (shouldInterrupt(0)) {
+            triggerInterrupt(0x40u, 0)
+        } else if(shouldInterrupt(1)) { // LCD STAT
+            triggerInterrupt(0x48u, 1)
+        } else if(shouldInterrupt(2)) { // Timer
+            triggerInterrupt(0x50u, 2)
+        } else if(shouldInterrupt(3)) { // Serial
+            triggerInterrupt(0x58u, 3)
+        } else if(shouldInterrupt(4)) { // Joypad
+            triggerInterrupt(0x60u, 4)
+        }
+    }
+
+    private fun shouldInterrupt(bit: Int): Boolean {
+        return interruptMasterEnabled && memory.get(0xFFFFu) and (1u shl bit).toUByte() > 0u.toUByte() && memory.get(0xFF0Fu) and (1u shl bit).toUByte() > 0u.toUByte()
+    }
+
+    private fun triggerInterrupt(jumpAddress: UShort, bit: Int) {
+        // Disable other interrupts
+        interruptMasterEnabled = false
+        memory.set(0xFF0Fu, memory.get(0xFF0Fu) or (1u shl bit).toUByte())
+
+        //TODO wait 2 cycles. More generally handle cycles for the interrupt routine
+
+        // Store current instruction in the stackpointer
+        storeShortToStack(programCounter)
+        // Jump to the interruption handler
+        programCounter = jumpAddress
+    }
+
+    private fun decodeAndExecute(instruction: UByte): Pair<Int, (() -> Unit)?> {
+        var actionAfterInstruction: (() -> Unit)? = null
         var cycleCount = when (instruction.toUInt()) {
             // =============
             // 8-bit loads
@@ -480,7 +519,7 @@ class CPU(private val memory: Memory) {
 
             // Miscellaneous
             0xCBu -> {
-                return when (readOp().toUInt()) {
+                when (readOp().toUInt()) {
                     // SWAP A
                     0x37u -> op({ swapOp(AF, true) }, 8)
                     // SWAP B
@@ -1174,7 +1213,7 @@ class CPU(private val memory: Memory) {
             }, 4)
             // STOP
             0x10u -> {
-                return when (readOp().toUInt()) {
+                when (readOp().toUInt()) {
                     0x00u -> op({
                         //TODO add sleep until button press
                     }, 4)
@@ -1183,11 +1222,11 @@ class CPU(private val memory: Memory) {
             }
             //DI
             0xF3u -> op({
-                //TODO Disable interrupts
+                interruptMasterEnabled = false
             }, 4)
             //EI
             0xFBu -> op({
-                //TODO enable interrupts
+                actionAfterInstruction = { interruptMasterEnabled = true }
             }, 4)
 
             // Rotates and shifts
@@ -1268,12 +1307,12 @@ class CPU(private val memory: Memory) {
             // RETI
             0xD9u -> op({
                 `return`()
-                //TODO handle interruption
+                interruptMasterEnabled = true
             }, 8)
 
             else -> throw Exception("Unknown OP instruction: $instruction")
         }
-        return cycleCount
+        return Pair(cycleCount, actionAfterInstruction)
     }
 
     private inline fun `return`(predicate: (() -> Boolean) = {true}) {
@@ -1288,8 +1327,7 @@ class CPU(private val memory: Memory) {
     private inline fun call(predicate: (() -> Boolean) = {true}) {
         val jumpAddress = readNN()
         if (predicate.invoke()) {
-            memory.set(--stackPointer, (programCounter.toUInt() shr 8).toUByte())
-            memory.set(--stackPointer, programCounter.toUByte())
+            storeShortToStack(programCounter)
             programCounter = jumpAddress
         }
     }
@@ -1650,10 +1688,14 @@ class CPU(private val memory: Memory) {
     }
 
     private inline fun restart(newAddress: UShort) {
-        memory.set(--stackPointer, (programCounter.toUInt() shr 8 ).toUByte())
-        memory.set(--stackPointer, programCounter.toUByte())
+        storeShortToStack(programCounter)
 
         programCounter = newAddress
+    }
+
+    private inline fun storeShortToStack(short: UShort) {
+        memory.set(--stackPointer, (short.toUInt() shr 8 ).toUByte())
+        memory.set(--stackPointer, short.toUByte())
     }
 
         private fun op(command: () -> Unit, cycleCount: Int): Int {

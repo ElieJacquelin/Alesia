@@ -4,7 +4,7 @@ import kotlin.test.assertEquals
 
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
-class CPUTest {
+class CpuOpTest {
 
     lateinit var cpu: CPU
     lateinit var memory: Memory
@@ -677,6 +677,7 @@ class CPUTest {
     fun `ADC A, A | no carry`() {
         memory.set(0x100u, 0x8Fu)
         cpu.AF.left = 0b01000011u
+        cpu.AF.right = 0u
 
         // 01000011 + 01000011 = 10000110
         // Carry flag false
@@ -693,6 +694,7 @@ class CPUTest {
     fun `ADC A, A | zero`() {
         memory.set(0x100u, 0x8Fu)
         cpu.AF.left = 0b00000000u
+        cpu.AF.right = 0u
 
         val cycleCount = cpu.fetch()
         assertEquals(0x101u, cpu.programCounter)
@@ -705,6 +707,7 @@ class CPUTest {
     fun `ADC A, A | carry`() {
         memory.set(0x100u, 0x8Fu)
         cpu.AF.left = 0b11000011u
+        cpu.AF.right = 0u
 
         // 11000011 + 11000011 = 110000110 => 10000110
         // Carry flag true
@@ -721,6 +724,7 @@ class CPUTest {
     fun `ADC A, A | half carry`() {
         memory.set(0x100u, 0x8Fu)
         cpu.AF.left = 0b01001100u
+        cpu.AF.right = 0u
 
         // 01001100 + 01001100 = 10011000
         // Carry flag false
@@ -835,6 +839,7 @@ class CPUTest {
     fun `SUBC A, B | no carry`() {
         memory.set(0x100u, 0x98u)
         cpu.AF.left = 0b01000011u
+        cpu.AF.right = 0u
         cpu.BC.left = 0b01000001u
 
         // 01000011 - 0100001 = 00000010
@@ -852,6 +857,7 @@ class CPUTest {
     fun `SUBC A, B | carry`() {
         memory.set(0x100u, 0x98u)
         cpu.AF.left = 0b00000000u
+        cpu.AF.right = 0u
         cpu.BC.left = 0b10000000u
 
         // 00000000 - 1000000 = (11111.....)10000000
@@ -869,6 +875,8 @@ class CPUTest {
     fun `SUBC A, B | half carry`() {
         memory.set(0x100u, 0x98u)
         cpu.AF.left = 0b00010000u
+        cpu.AF.right = 0u
+        cpu.AF.right = 0u
         cpu.BC.left = 0b00001000u
 
         // 00010000 - 0001000 = 00001000
@@ -887,6 +895,7 @@ class CPUTest {
     fun `SUBC A, A | zero`() {
         memory.set(0x100u, 0x9Fu)
         cpu.AF.left = 0b00100100u
+        cpu.AF.right = 0u
 
         val cycleCount = cpu.fetch()
         assertEquals(0x101u, cpu.programCounter)
@@ -979,6 +988,7 @@ class CPUTest {
     fun `INC A`() {
         memory.set(0x100u, 0x3Cu)
         cpu.AF.left = 0b00100100u
+        cpu.AF.right = 0u
 
         val cycleCount = cpu.fetch()
         assertEquals(0x101u, cpu.programCounter)
@@ -991,6 +1001,7 @@ class CPUTest {
     fun `INC A | Half carry`() {
         memory.set(0x100u, 0x3Cu)
         cpu.AF.left = 0b00101111u
+        cpu.AF.right = 0u
 
         val cycleCount = cpu.fetch()
         assertEquals(0x101u, cpu.programCounter)
@@ -1003,6 +1014,7 @@ class CPUTest {
     fun `DEC A`() {
         memory.set(0x100u, 0x3Du)
         cpu.AF.left = 0b00100100u
+        cpu.AF.right = 0u
 
         val cycleCount = cpu.fetch()
         assertEquals(0x101u, cpu.programCounter)
@@ -1015,6 +1027,7 @@ class CPUTest {
     fun `DEC A | Half carry`() {
         memory.set(0x100u, 0x3Du)
         cpu.AF.left = 0b00010000u
+        cpu.AF.right = 0u
 
         val cycleCount = cpu.fetch()
         assertEquals(0x101u, cpu.programCounter)
@@ -1026,6 +1039,7 @@ class CPUTest {
     @Test
     fun `ADD-16 HL, BC`() {
         memory.set(0x100u, 0x09u)
+        cpu.AF.right = 0u
         cpu.HL.setBoth(0x5555u)
         cpu.BC.setBoth(0x2222u)
 
@@ -1045,6 +1059,7 @@ class CPUTest {
         memory.set(0x100u, 0x09u)
         cpu.HL.setBoth(0xF555u)
         cpu.BC.setBoth(0x2222u)
+        cpu.AF.right = 0u
 
         // 0xF555 + 0x2222 = 0x11777
         // Carry flag true
@@ -1060,6 +1075,7 @@ class CPUTest {
     @Test
     fun `ADD-16 HL, BC | Half Carry`() {
         memory.set(0x100u, 0x09u)
+        cpu.AF.right = 0u
         cpu.HL.setBoth(0x5F55u)
         cpu.BC.setBoth(0x2222u)
 
@@ -1078,6 +1094,7 @@ class CPUTest {
     fun `ADD-16 SP, n`() {
         memory.set(0x100u, 0xE8u)
         memory.set(0x101u, 0x12u)
+        cpu.AF.right = 0u
         cpu.stackPointer = 0x1234u
 
         // 0x1234 + 0x12 = 0x1246
@@ -1096,6 +1113,7 @@ class CPUTest {
         memory.set(0x100u, 0xE8u)
         memory.set(0x101u, 0x1Fu)
         cpu.stackPointer = 0x1234u
+        cpu.AF.right = 0u
 
         // 0x1234 + 0x1F = 0x1253
         // Carry flag false
@@ -1113,6 +1131,7 @@ class CPUTest {
         memory.set(0x100u, 0xE8u)
         memory.set(0x101u, 0xF1u)
         cpu.stackPointer = 0x1234u
+        cpu.AF.right = 0u
 
         // 0x1234 + 0xF1 = 0x1325
         // Carry flag true
@@ -1253,6 +1272,7 @@ class CPUTest {
     fun `RCLA`() {
         memory.set(0x100u, 0x07u)
         cpu.AF.left = 0b1100_1010u
+        cpu.AF.right = 0u
 
         val cycleCount = cpu.fetch()
         assertEquals(0x101u, cpu.programCounter)
