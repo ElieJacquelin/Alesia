@@ -12,7 +12,6 @@ class Pixel(color: Int, palette: Int, backgroundPriority:Boolean) {
 
 }
 
-@ExperimentalUnsignedTypes
 class LcdControlRegister() {
     private var register: UByte = 0u
 

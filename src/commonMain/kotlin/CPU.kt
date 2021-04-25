@@ -1,6 +1,4 @@
 @ExperimentalStdlibApi
-@ExperimentalUnsignedTypes
-@Suppress("EXPERIMENTAL_UNSIGNED_LITERALS")
 class CPU(private val memory: Memory) {
     val frequency = 4194304 // 4.194304 MHz
 
@@ -13,6 +11,7 @@ class CPU(private val memory: Memory) {
     var programCounter: UShort
 
     var interruptMasterEnabled: Boolean = false
+    var halt: Boolean = false
 
     init {
         AF.left = 0x01u
@@ -29,7 +28,9 @@ class CPU(private val memory: Memory) {
     fun fetch(): Int {
         val instruction = this.readOp()
         val (cycleCount, actionAfterInstruction) = decodeAndExecute(instruction)
-        handleInterrupts()
+        while (halt) {
+            handleInterrupts()
+        }
         actionAfterInstruction?.invoke()
         return cycleCount
     }
@@ -66,6 +67,8 @@ class CPU(private val memory: Memory) {
         storeShortToStack(programCounter)
         // Jump to the interruption handler
         programCounter = jumpAddress
+        // Reset halt
+        halt = false
     }
 
     private fun decodeAndExecute(instruction: UByte): Pair<Int, (() -> Unit)?> {
@@ -1209,7 +1212,7 @@ class CPU(private val memory: Memory) {
             0x00u -> op({}, 4)
             // HALT
             0x76u -> op({
-                //TODO add sleep until interrupt
+
             }, 4)
             // STOP
             0x10u -> {
