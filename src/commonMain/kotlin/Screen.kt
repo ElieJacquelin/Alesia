@@ -1,16 +1,52 @@
 class Screen {
     val controlRegister: Byte = 0
-    val pixels = Array(256) {Array<Pixel>(256) { Pixel(0, 0, false) } }
+    val pixels = Array(160) {Array<Pixel>(144) { Pixel(0, 0, false) } }
     val scrollX: Int = 0
     val scrollY: Int = 0
     val windowPosX: Int = 0
     val windowPosY: Int = 0
 }
+// 8x8 pixel, 2 bytes per row, 16 bytes total
+class Tile(private val pixels: Array<Array<UByte>>) {
+    fun getColorId(x: Int, y: Int):ColorID {
+        // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
+        val first = if (pixels[x][1] and (1u shl (7 - y)).toUByte() > 1u) {
+            0x10u
+        } else {
+            0u
+        }
 
+        val second = if (pixels[x][0] and (1u shl (7 - y)).toUByte() > 1u) {
+            0x1u
+        } else {
+            0u
+        }
 
-class Pixel(color: Int, palette: Int, backgroundPriority:Boolean) {
+        return when(first + second) {
+            0x00u -> ColorID.ZERO
+            0x01u -> ColorID.ONE
+            0x10u -> ColorID.TWO
+            0x11u -> ColorID.THREE
+            else -> throw Exception("Invalid color ID: ${first + second}")
+        }
+    }
+}
+enum class ColorID {
+    ZERO, ONE, TWO, THREE;
+}
+
+class Pixel(colorId: Int, palette: Int, backgroundPriority:Boolean) {
 
 }
+
+class Palette(colors: Array<Int>)
+
+sealed class Layer {}
+
+class Background(tileReferenceMap: Array<Int>): Layer()
+class Window(): Layer()
+class Objects(tileOrStackedTiles: Array<Tile>): Layer()
+
 
 class LcdControlRegister() {
     private var register: UByte = 0u

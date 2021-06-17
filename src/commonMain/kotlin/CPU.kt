@@ -28,6 +28,8 @@ class CPU(private val memory: Memory) {
     fun fetch(): Int {
         val instruction = this.readOp()
         val (cycleCount, actionAfterInstruction) = decodeAndExecute(instruction)
+        handleInterrupts()
+        // wait for interruption if CPU has been halted
         while (halt) {
             handleInterrupts()
         }
@@ -1212,7 +1214,7 @@ class CPU(private val memory: Memory) {
             0x00u -> op({}, 4)
             // HALT
             0x76u -> op({
-
+                halt = true
             }, 4)
             // STOP
             0x10u -> {
