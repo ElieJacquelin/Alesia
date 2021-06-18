@@ -6,6 +6,16 @@ class Screen (val memory: Memory) {
     val windowPosX: Int = 0
     val windowPosY: Int = 0
     var tiles = generateTiles()
+    var OAM = generateOAM()
+
+    fun generateOAM(): Array<Object> {
+        val result = mutableListOf<Object>()
+        for(objectAddress in 0xFE00u..0xFE9Fu step 4) {
+            result.add(Object(objectAddress.toUShort()))
+        }
+        OAM = result.toTypedArray()
+        return OAM
+    }
 
     fun generateTiles(): Array<Tile> {
         val result = mutableListOf<Tile>()
@@ -38,7 +48,12 @@ class Screen (val memory: Memory) {
         }
     }
     class Window(): Layer()
-    class Objects(tileOrStackedTiles: Array<Tile>): Layer()
+    inner class Object(baseAddress: UShort): Layer() {
+        val yPos:UByte = memory.get(baseAddress)
+        val XPos:UByte = memory.get((baseAddress+1u).toUShort())
+        val tileIndex:UByte = memory.get((baseAddress+2u).toUShort())
+        val attributesFlags:UByte = memory.get((baseAddress+3u).toUShort())
+    }
 }
 // 8x8 pixel, 2 bytes per row, 16 bytes total
 class Tile(val pixels: Array<Array<UByte>>, private val id:Int) {

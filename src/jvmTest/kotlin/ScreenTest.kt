@@ -99,4 +99,24 @@ internal class ScreenTest {
             }
         }
     }
+
+    @Test
+    fun `Generate OAM`() {
+        // Given the OAM data for the first sprite is stored
+        memory.set(0xFE00u, 0xFAu)
+        memory.set(0xFE01u, 0xFBu)
+        memory.set(0xFE02u, 0xFCu)
+        memory.set(0xFE03u, 0xFDu)
+
+        // When the OAM is generated
+        screen.generateOAM()
+
+        // Then the OAM has 40 items
+        assertEquals(40, screen.OAM.size)
+        // And the first sprite has the relevant data
+        assertEquals(0xFAu, screen.OAM[0].yPos)
+        assertEquals(0xFBu, screen.OAM[0].XPos)
+        assertEquals(0xFCu, screen.OAM[0].tileIndex)
+        assertEquals(0xFDu, screen.OAM[0].attributesFlags)
+    }
 }

@@ -45,5 +45,13 @@ class Memory {
 
     fun set(address: UShort, value:UByte) {
         memory[address.toInt()] = value
+
+        if(address == 0xFF46u.toUShort()) {
+            // Trigger DMA: store sprites into OAM
+            for((index, sourceAddress) in (value * 0x100u..(value * 0x100u) + 0x9Fu).withIndex()) {
+                set((0xFE00u + index.toUInt()).toUShort(), get(sourceAddress.toUShort()))
+            }
+            // TODO add DMA cycle time
+        }
     }
 }
