@@ -1,13 +1,56 @@
-class Screen {
-    val controlRegister: Byte = 0
+class Screen (val memory: Memory) {
+    val controlRegister = LcdControlRegister()
     val pixels = Array(160) {Array<Pixel>(144) { Pixel(0, 0, false) } }
     val scrollX: Int = 0
     val scrollY: Int = 0
     val windowPosX: Int = 0
     val windowPosY: Int = 0
+    var tiles = generateTiles()
+
+    fun generateTiles(): Array<Tile> {
+        val result = mutableListOf<Tile>()
+        // Every tile needs 16 bytes with the tile ID being the index
+        for((tileId, tileAddress) in (0x8000u..0x97FFu step 16).withIndex()) {
+            val data = mutableListOf<Array<UByte>>()
+            // A tile is composed of 8 lines of 2 bytes
+            for (i in 0u..15u step 2) {
+                data.add(arrayOf(memory.get((tileAddress + i).toUShort()), memory.get((tileAddress + i + 1u).toUShort())))
+            }
+            result.add(Tile(data.toTypedArray(), tileId))
+        }
+        tiles = result.toTypedArray()
+        return tiles
+    }
+
+    sealed class Layer {}
+
+    inner class Background(): Layer() {
+        fun drawBackground() {
+            if(!controlRegister.getBgTileMap()) {
+                // 0x9800 tile map is being used
+                if(!controlRegister.getBgAndWindowTileDataAddressingMode()) {
+                    // 0x8000 mode
+                    for(tileId in 0x9800u..0x9BFFu) {
+
+                    }
+                }
+            }
+        }
+    }
+    class Window(): Layer()
+    class Objects(tileOrStackedTiles: Array<Tile>): Layer()
 }
 // 8x8 pixel, 2 bytes per row, 16 bytes total
-class Tile(private val pixels: Array<Array<UByte>>) {
+class Tile(val pixels: Array<Array<UByte>>, private val id:Int) {
+
+    fun getTileId(`8800AddressMode`: Boolean): Int {
+        return if(!`8800AddressMode` || (id in 128..255)) {
+            id
+        } else {
+            return id - 256
+        }
+    }
+
     fun getColorId(x: Int, y: Int):ColorID {
         // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
         val first = if (pixels[x][1] and (1u shl (7 - y)).toUByte() > 1u) {
@@ -41,11 +84,7 @@ class Pixel(colorId: Int, palette: Int, backgroundPriority:Boolean) {
 
 class Palette(colors: Array<Int>)
 
-sealed class Layer {}
 
-class Background(tileReferenceMap: Array<Int>): Layer()
-class Window(): Layer()
-class Objects(tileOrStackedTiles: Array<Tile>): Layer()
 
 
 class LcdControlRegister() {
@@ -87,7 +126,7 @@ class LcdControlRegister() {
         return register.toUInt() shr 5 > 0u
     }
 
-    fun setBgAndWindowTileData(`8800Mode`: Boolean) {
+    fun setBgAndWindowTileDataAddressingMode(`8800Mode`: Boolean) {
         register = if(`8800Mode`) {
             register or (1u shl 4).toUByte()
         }  else {
@@ -95,7 +134,7 @@ class LcdControlRegister() {
         }
     }
 
-    fun getBgAndWindowTileData(): Boolean {
+    fun getBgAndWindowTileDataAddressingMode(): Boolean {
         return register.toUInt() shr 4 > 0u
     }
 

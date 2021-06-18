@@ -33,7 +33,7 @@ class TileTest {
             arrayOf(ColorID.ZERO, ColorID.ZERO, ColorID.ZERO,ColorID.ZERO,ColorID.ZERO, ColorID.ZERO,ColorID.ZERO,ColorID.ZERO),
         )
 
-        tile = Tile(pixels)
+        tile = Tile(pixels, 0)
         for(x in 0..7) {
             for(y in 0..7) {
                 assertEquals(expectedColorID[x][y], tile.getColorId(x, y))
