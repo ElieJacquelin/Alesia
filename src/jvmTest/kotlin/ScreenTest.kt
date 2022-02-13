@@ -89,11 +89,11 @@ internal class ScreenTest {
         assertEquals(1, screen.tiles.filter { tile -> tile.getTileId(`8800AddressMode`) == tileId }.size)
         val lastTile = screen.tiles.find { tile -> tile.getTileId(`8800AddressMode`) == tileId }!!
         // That sprite has 8 rows
-        assertEquals(8, lastTile.pixels.size)
+        assertEquals(8, lastTile.pixelsData.size)
         // of 2 bytes each
-        assertEquals(2, lastTile.pixels[0].size)
+        assertEquals(2, lastTile.pixelsData[0].size)
         // And all values are set accordingly
-        for (row in lastTile.pixels) {
+        for (row in lastTile.pixelsData) {
             for (pixel in row) {
                 assertEquals(0xFFu, pixel)
             }

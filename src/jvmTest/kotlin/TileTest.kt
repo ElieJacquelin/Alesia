@@ -19,7 +19,6 @@ class TileTest {
 
     @Test
     fun `Get correct ColorIDs from tile`() {
-        Array(160) {Array<Pixel>(144) { Pixel(0, 0, false) } }
         // Based on https://www.huderlem.com/demos/gameboy2bpp.html
         val pixels = initTile(arrayOf(0x7Cu, 0x7Cu, 0x00u, 0xC6u, 0xC6u, 0x00u, 0x00u, 0xFEu, 0xC6u, 0xC6u, 0x00u, 0xC6u, 0xC6u, 0x00u, 0x00u, 0x00u))
         val expectedColorID = arrayOf(
@@ -36,7 +35,7 @@ class TileTest {
         tile = Tile(pixels, 0)
         for(x in 0..7) {
             for(y in 0..7) {
-                assertEquals(expectedColorID[x][y], tile.getColorId(x, y))
+                assertEquals(expectedColorID[x][y], tile.pixels[x][y].colorId)
             }
         }
     }

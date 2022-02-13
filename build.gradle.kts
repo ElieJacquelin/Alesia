@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "1.5.0-RC"
+    kotlin("multiplatform") version "1.6.0"
 }
 
 group = "me.eliej"
@@ -54,8 +54,8 @@ kotlin {
                 implementation(kotlin("test-annotations-common"))
                 implementation(kotlin("test"))
                 implementation(kotlin("test-junit"))
-                implementation("io.mockk:mockk-common:1.10.3-jdk8")
-                implementation("io.mockk:mockk:1.10.3-jdk8")
+                implementation("io.mockk:mockk-common:1.12.2")
+                implementation("io.mockk:mockk:1.12.2")
             }
         }
         val nativeMain by getting

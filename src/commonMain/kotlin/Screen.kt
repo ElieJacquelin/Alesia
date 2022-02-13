@@ -1,6 +1,8 @@
+import rendering.PixelFetcher
+
 class Screen (val memory: Memory) {
     val controlRegister = LcdControlRegister()
-    val pixels = Array(160) {Array<Pixel>(144) { Pixel(0, 0, false) } }
+    val pixels = Array(160) {Array(144) { Pixel(ColorID.ZERO, 0, false) } }
     val scrollX: Int = 0
     val scrollY: Int = 0
     val windowPosX: Int = 0
@@ -32,6 +34,17 @@ class Screen (val memory: Memory) {
         return tiles
     }
 
+    fun renderFrame() {
+        for (LY in 0..153) {
+            renderLine(LY)
+        }
+    }
+
+    private fun renderLine(LY: Int) {
+        val backgroundFifo = ArrayDeque<Pixel>()
+        val pixelFetcher = PixelFetcher(controlRegister, memory, backgroundFifo, LY)
+    }
+
     sealed class Layer {}
 
     inner class Background(): Layer() {
@@ -56,7 +69,20 @@ class Screen (val memory: Memory) {
     }
 }
 // 8x8 pixel, 2 bytes per row, 16 bytes total
-class Tile(val pixels: Array<Array<UByte>>, private val id:Int) {
+class Tile(val pixelsData: Array<Array<UByte>>, private val id:Int) {
+
+    val pixels: Array<Array<Pixel>>
+
+    init {
+        val pixels = Array(8) {Array(8) { Pixel(ColorID.ZERO, 0, false) } }
+        for (x in 0..7) {
+            for (y in 0..7) {
+                // TODO handle palette and background priority
+                pixels[x][y] = Pixel(getColorId(x,y), 0, false)
+            }
+        }
+        this.pixels = pixels
+    }
 
     fun getTileId(`8800AddressMode`: Boolean): Int {
         return if(!`8800AddressMode` || (id in 128..255)) {
@@ -66,15 +92,15 @@ class Tile(val pixels: Array<Array<UByte>>, private val id:Int) {
         }
     }
 
-    fun getColorId(x: Int, y: Int):ColorID {
+    private fun getColorId(x: Int, y: Int):ColorID {
         // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
-        val first = if (pixels[x][1] and (1u shl (7 - y)).toUByte() > 1u) {
+        val first = if (pixelsData[x][1] and (1u shl (7 - y)).toUByte() > 1u) {
             0x10u
         } else {
             0u
         }
 
-        val second = if (pixels[x][0] and (1u shl (7 - y)).toUByte() > 1u) {
+        val second = if (pixelsData[x][0] and (1u shl (7 - y)).toUByte() > 1u) {
             0x1u
         } else {
             0u
@@ -93,7 +119,7 @@ enum class ColorID {
     ZERO, ONE, TWO, THREE;
 }
 
-class Pixel(colorId: Int, palette: Int, backgroundPriority:Boolean) {
+data class Pixel(val colorId: ColorID, val palette: Int, val backgroundPriority:Boolean) {
 
 }
 
@@ -109,7 +135,7 @@ class LcdControlRegister() {
         register = if(enabled) {
             register or (1u shl 7).toUByte()
         }  else {
-            register and (1u shl 7).toUByte()
+            register and (1u shl 7).toUByte().inv()
         }
     }
 
@@ -121,7 +147,7 @@ class LcdControlRegister() {
         register = if(first) {
             register or (1u shl 6).toUByte()
         }  else {
-            register and (1u shl 6).toUByte()
+            register and (1u shl 6).toUByte().inv()
         }
     }
 
@@ -133,7 +159,7 @@ class LcdControlRegister() {
         register = if(enabled) {
             register or (1u shl 5).toUByte()
         }  else {
-            register and (1u shl 5).toUByte()
+            register and (1u shl 5).toUByte().inv()
         }
     }
 
@@ -141,11 +167,11 @@ class LcdControlRegister() {
         return register.toUInt() shr 5 > 0u
     }
 
-    fun setBgAndWindowTileDataAddressingMode(`8800Mode`: Boolean) {
-        register = if(`8800Mode`) {
+    fun setBgAndWindowTileDataAddressingMode(`8000Mode`: Boolean) {
+        register = if(`8000Mode`) {
             register or (1u shl 4).toUByte()
         }  else {
-            register and (1u shl 4).toUByte()
+            register and (1u shl 4).toUByte().inv()
         }
     }
 
@@ -157,7 +183,7 @@ class LcdControlRegister() {
         register = if(first) {
             register or (1u shl 3).toUByte()
         }  else {
-            register and (1u shl 3).toUByte()
+            register and (1u shl 3).toUByte().inv()
         }
     }
 
@@ -169,7 +195,7 @@ class LcdControlRegister() {
         register = if(enabled) {
             register or (1u shl 2).toUByte()
         }  else {
-            register and (1u shl 2).toUByte()
+            register and (1u shl 2).toUByte().inv()
         }
     }
 
@@ -181,7 +207,7 @@ class LcdControlRegister() {
         register = if(enabled) {
             register or (1u shl 1).toUByte()
         }  else {
-            register and (1u shl 1).toUByte()
+            register and (1u shl 1).toUByte().inv()
         }
     }
 
@@ -193,7 +219,7 @@ class LcdControlRegister() {
         register = if(enabled) {
             register or (1u shl 0).toUByte()
         }  else {
-            register and (1u shl 0).toUByte()
+            register and (1u shl 0).toUByte().inv()
         }
     }
 
