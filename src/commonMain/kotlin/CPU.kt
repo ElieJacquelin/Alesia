@@ -1321,7 +1321,8 @@ class CPU(private val memory: Memory) {
 
     private inline fun jumpRelative(predicate: (() -> Boolean) = {true}) {
         // the next byte is read is considered signed and therefore can be a sum or a subtraction
-        val jumpAddress = (programCounter.toShort() + readOp().toByte()).toUShort()
+        val offset = readOp().toByte() // The read should be done first is order to increment the program counter before the jump
+        val jumpAddress = (programCounter.toShort() + offset).toUShort()
         if (predicate.invoke()) {
             programCounter = jumpAddress
         }

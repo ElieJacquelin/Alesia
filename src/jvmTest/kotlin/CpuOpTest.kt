@@ -1793,7 +1793,7 @@ class CpuOpTest {
         memory.set(0x101u, 0x10u)
 
         val cycleCount = cpu.tick()
-        assertEquals(0x111u, cpu.programCounter)
+        assertEquals(0x112u, cpu.programCounter)
         assertEquals(8, cycleCount)
     }
 
@@ -1803,7 +1803,7 @@ class CpuOpTest {
         memory.set(0x101u, 0xF0u)
 
         val cycleCount = cpu.tick()
-        assertEquals(0xF1u, cpu.programCounter)
+        assertEquals(0xF2u, cpu.programCounter)
         assertEquals(8, cycleCount)
     }
 
