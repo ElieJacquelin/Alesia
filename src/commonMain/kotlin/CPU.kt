@@ -25,7 +25,7 @@ class CPU(private val memory: Memory) {
     }
 
 
-    fun fetch(): Int {
+    fun tick(): Int {
         val instruction = this.readOp()
         val (cycleCount, actionAfterInstruction) = decodeAndExecute(instruction)
         handleInterrupts()
@@ -447,9 +447,7 @@ class CPU(private val memory: Memory) {
             0x34u -> op({
                 val result = (memory.get(HL.both()) + 1u).toUByte()
                 memory.set(HL.both(), result)
-                if (result.toUInt() == 0u) {
-                    AF.setZeroFlag(true)
-                }
+                AF.setZeroFlag(result.toUInt() == 0u)
                 AF.setNFlag(false)
                 if ((result and 0x0Fu).toUInt() == 0x00u) {
                     AF.setHalfCarryFlag(true)
@@ -474,9 +472,7 @@ class CPU(private val memory: Memory) {
             0x35u -> op({
                 val result = (memory.get(HL.both()) - 1u).toUByte()
                 memory.set(HL.both(), result)
-                if (result.toUInt() == 0u) {
-                    AF.setZeroFlag(true)
-                }
+                AF.setZeroFlag(result.toUInt() == 0u)
                 AF.setNFlag(false)
                 if ((result and 0x0Fu).toUInt() == 0x0Fu) {
                     AF.setHalfCarryFlag(true)
@@ -567,9 +563,7 @@ class CPU(private val memory: Memory) {
                         val result = memory.get(HL.both()).rotateLeft(1)
                         memory.set(HL.both(), result)
 
-                        if (result.toUInt() == 0u) {
-                            AF.setZeroFlag(true)
-                        }
+                        AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(result.toUInt() and 1u == 1u)
@@ -597,9 +591,7 @@ class CPU(private val memory: Memory) {
 
                         val result = ((value.toUInt() shl 1) + oldCarry).toUByte()
                         memory.set(HL.both(), result)
-                        if (result.toUInt() == 0u) {
-                            AF.setZeroFlag(true)
-                        }
+                        AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(newCarry == 1u)
@@ -622,9 +614,7 @@ class CPU(private val memory: Memory) {
                     //RRC (HL)
                     0x0Eu -> op({
                         val result = memory.get(HL.both()).rotateRight(1)
-                        if (result.toUInt() == 0u) {
-                            AF.setZeroFlag(true)
-                        }
+                        AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(result.toUInt() and 0b1000_0000u > 0u)
@@ -653,9 +643,7 @@ class CPU(private val memory: Memory) {
                         val result = ((value.toUInt() shr 1) + oldCarry).toUByte()
                         memory.set(HL.both(), result)
 
-                        if (result.toUInt() == 0u) {
-                            AF.setZeroFlag(true)
-                        }
+                        AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(newCarry == 1u)
@@ -683,9 +671,7 @@ class CPU(private val memory: Memory) {
                         val mostSignificant = value and 0b1000_0000u
                         val result = (value.toUInt() shl 1).toUByte()
                         memory.set(HL.both(), result)
-                        if (result.toUInt() == 0u) {
-                            AF.setZeroFlag(true)
-                        }
+                        AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(mostSignificant >= 1u)
@@ -717,9 +703,7 @@ class CPU(private val memory: Memory) {
                         // Storing previous bit 0 to save it in the carry
                         val leastSignificant = value and 0b0000_0001u
                         memory.set(HL.both(), result)
-                        if (result.toUInt() == 0u) {
-                            AF.setZeroFlag(true)
-                        }
+                        AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(leastSignificant.toUInt() == 1u)
@@ -748,9 +732,7 @@ class CPU(private val memory: Memory) {
                         // Storing previous bit 0 to save it in the carry
                         val leastSignificant = value and 0b0000_0001u
                         memory.set(HL.both(), result)
-                        if (result.toUInt() == 0u) {
-                            AF.setZeroFlag(true)
-                        }
+                        AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(leastSignificant.toUInt() == 1u)
@@ -1436,9 +1418,7 @@ class CPU(private val memory: Memory) {
         } else {
             ++register.right
         }
-        if (result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         if ((result and 0x0Fu).toUInt() == 0x00u) {
             AF.setHalfCarryFlag(true)
@@ -1451,9 +1431,7 @@ class CPU(private val memory: Memory) {
         } else {
             --register.right
         }
-        if (result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         if ((result and 0x0Fu).toUInt() == 0x0Fu) {
             AF.setHalfCarryFlag(true)
@@ -1487,9 +1465,7 @@ class CPU(private val memory: Memory) {
             register.right = register.right.rotateLeft(1)
             register.right
         }
-        if(result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
         AF.setCarryFlag(result.toUInt() and 1u == 1u)
@@ -1503,9 +1479,7 @@ class CPU(private val memory: Memory) {
             register.right = register.right.rotateRight(1)
             register.right
         }
-        if(result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
         AF.setCarryFlag(result.toUInt() and 0b1000_0000u > 0u)
@@ -1527,12 +1501,10 @@ class CPU(private val memory: Memory) {
         } else {
             register.right = result
         }
-        if(result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
-        AF.setCarryFlag(newCarry == 1u)
+        AF.setCarryFlag(newCarry > 0u)
 
     }
 
@@ -1552,9 +1524,7 @@ class CPU(private val memory: Memory) {
             register.right = result
         }
 
-        if(result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
         AF.setCarryFlag(newCarry == 1u)
@@ -1579,9 +1549,7 @@ class CPU(private val memory: Memory) {
         } else {
             register.right = result
         }
-        if(result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
         AF.setCarryFlag(leastSignificant.toUInt() == 1u)
@@ -1602,9 +1570,7 @@ class CPU(private val memory: Memory) {
         } else {
             register.right = result
         }
-        if(result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
         AF.setCarryFlag(mostSignificant >= 1u)
@@ -1626,9 +1592,7 @@ class CPU(private val memory: Memory) {
         } else {
             register.right = result
         }
-        if(result.toUInt() == 0u) {
-            AF.setZeroFlag(true)
-        }
+        AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
         AF.setCarryFlag(leastSignificant.toUInt() == 1u)

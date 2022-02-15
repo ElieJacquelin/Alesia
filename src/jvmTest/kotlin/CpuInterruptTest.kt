@@ -22,14 +22,14 @@ class CpuInterruptTest {
         // Given interrupt master is disabled
         memory.set(0x100u, 0xF3u)
         memory.set(0x101u, 0x00u)
-        cpu.fetch()
+        cpu.tick()
 
         // And VBLANK interrupt is enabled and requested
         memory.set(0xFFFFu, 0b0000_0001u)
         memory.set(0xFF0Fu, 0b0000_0001u)
 
         // When the next instruction is executed
-        cpu.fetch()
+        cpu.tick()
 
         // Then the interrupt is not triggered
         assertEquals(cpu.programCounter, 0x102u)
@@ -43,7 +43,7 @@ class CpuInterruptTest {
         memory.set(0xFFFFu, 0b0000_0001u)
         memory.set(0xFF0Fu, 0b0000_0001u)
         // When the next instruction is executed
-        cpu.fetch()
+        cpu.tick()
 
         // Then the interrupt is triggered
         assertEquals(cpu.programCounter, 0x0040u)
@@ -64,13 +64,13 @@ class CpuInterruptTest {
         memory.set(0xFFFFu, 0b0000_0001u)
         memory.set(0xFF0Fu, 0b0000_0001u)
         // When the next instruction is executed
-        cpu.fetch()
+        cpu.tick()
 
         // Then the interrupt is not triggered
         assertEquals(cpu.programCounter, 0x0101u)
 
         // When the second instruction is executed
-        cpu.fetch()
+        cpu.tick()
         // Then the interrupt is triggered
         assertEquals(cpu.programCounter, 0x0040u)
         // And the previous counter is stored onto the stack
