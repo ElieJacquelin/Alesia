@@ -15,6 +15,15 @@ class CpuOpTest {
         cpu = CPU(memory)
         cpu.stackPointer = 0x100u
     }
+
+    @Test
+    fun `F flag lower nibble always 0`() {
+        // When a non 0 value is set to F lower nibble
+        cpu.AF.right = 0xFFu
+        // Then the lower nibble remains 0 and higher nibble get the value
+        assertEquals(0xF0u, cpu.AF.right)
+    }
+
     // =============================================
     // LD nn,n => Load into register the value at PC
     // =============================================
@@ -584,18 +593,33 @@ class CpuOpTest {
     fun `PUSH AF`() {
         memory.set(0x100u, 0xF5u)
         cpu.stackPointer = 0x3456u
-        cpu.AF.setBoth(0x1234u)
+        cpu.AF.setBoth(0x1230u)
 
         val cycleCount = cpu.tick()
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(16, cycleCount)
         assertEquals(0x12u, memory.get(0x3455u))
-        assertEquals(0x34u, memory.get(0x3454u))
+        assertEquals(0x30u, memory.get(0x3454u))
         assertEquals(0x3454u, cpu.stackPointer)
     }
 
     @Test
     fun `POP AF`() {
+        memory.set(0x100u, 0xF1u)
+        cpu.stackPointer = 0x3456u
+        memory.set(0x3456u, 0x10u)
+        memory.set(0x3457u, 0x34u)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0x34u, cpu.AF.left)
+        assertEquals(0x10u, cpu.AF.right)
+        assertEquals(0x3458u, cpu.stackPointer)
+    }
+
+    @Test
+    fun `POP AF | F lower nibble always 0`() {
         memory.set(0x100u, 0xF1u)
         cpu.stackPointer = 0x3456u
         memory.set(0x3456u, 0x12u)
@@ -605,7 +629,7 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(16, cycleCount)
         assertEquals(0x34u, cpu.AF.left)
-        assertEquals(0x12u, cpu.AF.right)
+        assertEquals(0x10u, cpu.AF.right)
         assertEquals(0x3458u, cpu.stackPointer)
     }
 

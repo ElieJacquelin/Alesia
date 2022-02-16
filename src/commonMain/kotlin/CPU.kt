@@ -1675,7 +1675,7 @@ class CPU(private val memory: Memory) {
 
         open class SplitRegister {
             var left: UByte = 0u
-            var right: UByte = 0u
+            open var right: UByte = 0u
 
             inline fun both(): UShort {
                 return (left.toUInt() shl 8 or right.toUInt()).toUShort()
@@ -1701,6 +1701,12 @@ class CPU(private val memory: Memory) {
         }
 
         class AFRegister : SplitRegister() {
+
+            override var right: UByte = 0u
+                set(value) {
+                    field = (value and 0xF0u) // The lower nibble of the F register should always be 0
+                }
+
             inline fun resetFlags() {
                 right = 0x0000u
             }
