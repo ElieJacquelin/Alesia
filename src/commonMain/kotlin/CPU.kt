@@ -234,8 +234,8 @@ class CPU(private val memory: Memory) {
             // LD(nn), SP
             0x08u -> op({
                 val address = readNN()
-                memory.set(address, stackPointer.getLeft())
-                memory.set(address.inc(), stackPointer.getRight())
+                memory.set(address, stackPointer.getRight())
+                memory.set(address.inc(), stackPointer.getLeft())
             }, 20)
             // PUSH AF
             0xF5u -> op({
@@ -1344,7 +1344,7 @@ class CPU(private val memory: Memory) {
         val result = AF.left + number
         val carriedBits = result xor AF.left.toUInt() xor number.toUInt()
         AF.left = (result).toUByte()
-        AF.setZeroFlag(result == 0u)
+        AF.setZeroFlag(result.toUByte() == (0u).toUByte())
         AF.setNFlag(false)
         AF.setHalfCarryFlag((carriedBits and 0x10u) != 0u)
         AF.setCarryFlag((carriedBits and 0x100u) != 0u)
@@ -1354,7 +1354,7 @@ class CPU(private val memory: Memory) {
         val result = AF.left - number
         val carriedBits = result xor AF.left.toUInt() xor number.toUInt()
         AF.left = (result).toUByte()
-        AF.setZeroFlag(result == 0u)
+        AF.setZeroFlag(result.toUByte() == (0u).toUByte())
         AF.setNFlag(true)
         AF.setHalfCarryFlag((carriedBits and 0x10u) != 0u)
         AF.setCarryFlag((carriedBits and 0x100u) != 0u)
@@ -1364,7 +1364,7 @@ class CPU(private val memory: Memory) {
         val carryValue = if (AF.getCarryFlag()) 1u else 0u
         val result = AF.left + number + carryValue
         AF.left = (result).toUByte()
-        AF.setZeroFlag(result == 0u)
+        AF.setZeroFlag(result.toUByte() == (0u).toUByte())
         AF.setNFlag(false)
         AF.setHalfCarryFlag((AF.left and 0x0Fu) + (number and 0x0Fu) + carryValue > 0X0Fu)
         AF.setCarryFlag(result > 0xFFu)
@@ -1374,7 +1374,7 @@ class CPU(private val memory: Memory) {
         val carryValue = if (AF.getCarryFlag()) 1u else 0u
         val result = AF.left - number - carryValue
         AF.left = (result).toUByte()
-        AF.setZeroFlag(result == 0u)
+        AF.setZeroFlag(result.toUByte() == (0u).toUByte())
         AF.setNFlag(true)
         AF.setHalfCarryFlag((number.toUInt() and 0b00001000u) and (result and 0b00001000u) > 0u)
         AF.setCarryFlag((number.toUInt() and 0b10000000u) and (result and 0b10000000u) > 0u) // Shifting bits would work but requires to shift from UInt to UByte to UInt again

@@ -585,8 +585,8 @@ class CpuOpTest {
         val cycleCount = cpu.tick()
         assertEquals(0x103u, cpu.programCounter) // forward 3 steps
         assertEquals(20, cycleCount)
-        assertEquals(0x34u, memory.get(0x1211u))
-        assertEquals(0x56u, memory.get(0x1212u))
+        assertEquals(0x56u, memory.get(0x1211u))
+        assertEquals(0x34u, memory.get(0x1212u))
     }
 
     @Test
@@ -698,6 +698,24 @@ class CpuOpTest {
     }
 
     @Test
+    fun `ADD A, B | overflow to 0`() {
+        memory.set(0x100u, 0x80u)
+        cpu.AF.left = 0b11111111u
+        cpu.BC.left = 0b00000001u
+
+        // 11111111 + 00000001 = 1 0000 0000
+        // Carry flag true
+        // Half carry true
+        // Zero flag true
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b0u, cpu.AF.left)
+        assertEquals(0b10110000u, cpu.AF.right)
+    }
+
+    @Test
     fun `ADC A, A | no carry`() {
         memory.set(0x100u, 0x8Fu)
         cpu.AF.left = 0b01000011u
@@ -776,6 +794,25 @@ class CpuOpTest {
         assertEquals(4, cycleCount)
         assertEquals(0b10000111u, cpu.AF.left)
         assertEquals(0b00000000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `ADC A, B | Overflow to 0`() {
+        memory.set(0x100u, 0x88u)
+        cpu.AF.left = 0b11111111u
+        cpu.AF.right= 0u
+        cpu.BC.left = 1u
+
+        // 11111111 + 00000001 = 100000000 => 00000000
+        // Carry flag true
+        // Half carry false
+        // Zero flag true
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b00000000u, cpu.AF.left)
+        assertEquals(0b10010000u, cpu.AF.right)
     }
 
     @Test
