@@ -777,7 +777,7 @@ class CPU(private val memory: Memory) {
                     // BIT 2 C
                     0x51u -> op({ bit(BC, false, 2) }, 8)
                     // BIT 2 D
-                    0x52u -> op({ bit(DE, true, 0) }, 8)
+                    0x52u -> op({ bit(DE, true, 2) }, 8)
                     // BIT 2 E
                     0x53u -> op({ bit(DE, false, 2) }, 8)
                     // BIT 2 H
@@ -794,7 +794,7 @@ class CPU(private val memory: Memory) {
                     // BIT 3 C
                     0x59u -> op({ bit(BC, false, 3) }, 8)
                     // BIT 3 D
-                    0x5Au -> op({ bit(DE, true, 0) }, 8)
+                    0x5Au -> op({ bit(DE, true, 3) }, 8)
                     // BIT 3 E
                     0x5Bu -> op({ bit(DE, false, 3) }, 8)
                     // BIT 3 H
@@ -811,7 +811,7 @@ class CPU(private val memory: Memory) {
                     // BIT 4 C
                     0x61u -> op({ bit(BC, false, 4) }, 8)
                     // BIT 4 D
-                    0x62u -> op({ bit(DE, true, 0) }, 8)
+                    0x62u -> op({ bit(DE, true, 4) }, 8)
                     // BIT 4 E
                     0x63u -> op({ bit(DE, false, 4) }, 8)
                     // BIT 4 H
@@ -828,7 +828,7 @@ class CPU(private val memory: Memory) {
                     // BIT 5 C
                     0x69u -> op({ bit(BC, false, 5) }, 8)
                     // BIT 5 D
-                    0x6Au -> op({ bit(DE, true, 0) }, 8)
+                    0x6Au -> op({ bit(DE, true, 5) }, 8)
                     // BIT 5 E
                     0x6Bu -> op({ bit(DE, false, 5) }, 8)
                     // BIT 5 H
@@ -845,7 +845,7 @@ class CPU(private val memory: Memory) {
                     // BIT 6 C
                     0x71u -> op({ bit(BC, false, 6) }, 8)
                     // BIT 6 D
-                    0x72u -> op({ bit(DE, true, 0) }, 8)
+                    0x72u -> op({ bit(DE, true, 6) }, 8)
                     // BIT 6 E
                     0x73u -> op({ bit(DE, false, 6) }, 8)
                     // BIT 6 H
@@ -862,7 +862,7 @@ class CPU(private val memory: Memory) {
                     // BIT 7 C
                     0x79u -> op({ bit(BC, false, 7) }, 8)
                     // BIT 7 D
-                    0x7Au -> op({ bit(DE, true, 0) }, 8)
+                    0x7Au -> op({ bit(DE, true, 7) }, 8)
                     // BIT 7 E
                     0x7Bu -> op({ bit(DE, false, 7) }, 8)
                     // BIT 7 H
@@ -896,7 +896,7 @@ class CPU(private val memory: Memory) {
                     // SET 1 C
                     0xC9u -> op({ set(BC, false, 1) }, 8)
                     // SET 1 D
-                    0xCAu -> op({ set(DE, true, 0) }, 8)
+                    0xCAu -> op({ set(DE, true, 1) }, 8)
                     // SET 1 E
                     0xCBu -> op({ set(DE, false, 1) }, 8)
                     // SET 1 H
@@ -913,7 +913,7 @@ class CPU(private val memory: Memory) {
                     // SET 2 C
                     0xD1u -> op({ set(BC, false, 2) }, 8)
                     // SET 2 D
-                    0xD2u -> op({ set(DE, true, 0) }, 8)
+                    0xD2u -> op({ set(DE, true, 2) }, 8)
                     // SET 2 E
                     0xD3u -> op({ set(DE, false, 2) }, 8)
                     // SET 2 H
@@ -930,7 +930,7 @@ class CPU(private val memory: Memory) {
                     // SET 3 C
                     0xD9u -> op({ set(BC, false, 3) }, 8)
                     // SET 3 D
-                    0xDAu -> op({ set(DE, true, 0) }, 8)
+                    0xDAu -> op({ set(DE, true, 3) }, 8)
                     // SET 3 E
                     0xDBu -> op({ set(DE, false, 3) }, 8)
                     // SET 3 H
@@ -947,7 +947,7 @@ class CPU(private val memory: Memory) {
                     // SET 4 C
                     0xE1u -> op({ set(BC, false, 4) }, 8)
                     // SET 4 D
-                    0xE2u -> op({ set(DE, true, 0) }, 8)
+                    0xE2u -> op({ set(DE, true, 4) }, 8)
                     // SET 4 E
                     0xE3u -> op({ set(DE, false, 4) }, 8)
                     // SET 4 H
@@ -964,7 +964,7 @@ class CPU(private val memory: Memory) {
                     // SET 5 C
                     0xE9u -> op({ set(BC, false, 5) }, 8)
                     // SET 5 D
-                    0xEAu -> op({ set(DE, true, 0) }, 8)
+                    0xEAu -> op({ set(DE, true, 5) }, 8)
                     // SET 5 E
                     0xEBu -> op({ set(DE, false, 5) }, 8)
                     // SET 5 H
@@ -981,7 +981,7 @@ class CPU(private val memory: Memory) {
                     // SET 6 C
                     0xF1u -> op({ set(BC, false, 6) }, 8)
                     // SET 6 D
-                    0xF2u -> op({ set(DE, true, 0) }, 8)
+                    0xF2u -> op({ set(DE, true, 6) }, 8)
                     // SET 6 E
                     0xF3u -> op({ set(DE, false, 6) }, 8)
                     // SET 6 H
@@ -998,7 +998,7 @@ class CPU(private val memory: Memory) {
                     // SET 7 C
                     0xF9u -> op({ set(BC, false, 7) }, 8)
                     // SET 7 D
-                    0xFAu -> op({ set(DE, true, 0) }, 8)
+                    0xFAu -> op({ set(DE, true, 7) }, 8)
                     // SET 7 E
                     0xFBu -> op({ set(DE, false, 7) }, 8)
                     // SET 7 H
@@ -1032,7 +1032,7 @@ class CPU(private val memory: Memory) {
                     // RES 1 C
                     0x89u -> op({ reset(BC, false, 1) }, 8)
                     // RES 1 D
-                    0x8Au -> op({ reset(DE, true, 0) }, 8)
+                    0x8Au -> op({ reset(DE, true, 1) }, 8)
                     // RES 1 E
                     0x8Bu -> op({ reset(DE, false, 1) }, 8)
                     // RES 1 H
@@ -1049,7 +1049,7 @@ class CPU(private val memory: Memory) {
                     // RES 2 C
                     0x91u -> op({ reset(BC, false, 2) }, 8)
                     // RES 2 D
-                    0x92u -> op({ reset(DE, true, 0) }, 8)
+                    0x92u -> op({ reset(DE, true, 2) }, 8)
                     // RES 2 E
                     0x93u -> op({ reset(DE, false, 2) }, 8)
                     // RES 2 H
@@ -1066,7 +1066,7 @@ class CPU(private val memory: Memory) {
                     // RES 3 C
                     0x99u -> op({ reset(BC, false, 3) }, 8)
                     // RES 3 D
-                    0x9Au -> op({ reset(DE, true, 0) }, 8)
+                    0x9Au -> op({ reset(DE, true, 3) }, 8)
                     // RES 3 E
                     0x9Bu -> op({ reset(DE, false, 3) }, 8)
                     // RES 3 H
@@ -1083,7 +1083,7 @@ class CPU(private val memory: Memory) {
                     // RES 4 C
                     0xA1u -> op({ reset(BC, false, 4) }, 8)
                     // RES 4 D
-                    0xA2u -> op({ reset(DE, true, 0) }, 8)
+                    0xA2u -> op({ reset(DE, true, 4) }, 8)
                     // RES 4 E
                     0xA3u -> op({ reset(DE, false, 4) }, 8)
                     // RES 4 H
@@ -1100,7 +1100,7 @@ class CPU(private val memory: Memory) {
                     // RES 5 C
                     0xA9u -> op({ reset(BC, false, 5) }, 8)
                     // RES 5 D
-                    0xAAu -> op({ reset(DE, true, 0) }, 8)
+                    0xAAu -> op({ reset(DE, true, 5) }, 8)
                     // RES 5 E
                     0xABu -> op({ reset(DE, false, 5) }, 8)
                     // RES 5 H
@@ -1117,7 +1117,7 @@ class CPU(private val memory: Memory) {
                     // RES 6 C
                     0xB1u -> op({ reset(BC, false, 6) }, 8)
                     // RES 6 D
-                    0xB2u -> op({ reset(DE, true, 0) }, 8)
+                    0xB2u -> op({ reset(DE, true, 6) }, 8)
                     // RES 6 E
                     0xB3u -> op({ reset(DE, false, 6) }, 8)
                     // RES 6 H
@@ -1134,7 +1134,7 @@ class CPU(private val memory: Memory) {
                     // RES 7 C
                     0xB9u -> op({ reset(BC, false, 7) }, 8)
                     // RES 7 D
-                    0xBAu -> op({ reset(DE, true, 0) }, 8)
+                    0xBAu -> op({ reset(DE, true, 7) }, 8)
                     // RES 7 E
                     0xBBu -> op({ reset(DE, false, 7) }, 8)
                     // RES 7 H
@@ -1605,9 +1605,9 @@ class CPU(private val memory: Memory) {
 
     private inline fun bit(value: UByte, bit: Int) {
         if (value.toUInt() shr bit and 0x01u == 1u) {
-            AF.setZeroFlag(true)
-        } else {
             AF.setZeroFlag(false)
+        } else {
+            AF.setZeroFlag(true)
         }
         AF.setNFlag(false)
         AF.setHalfCarryFlag(true)
@@ -1635,7 +1635,7 @@ class CPU(private val memory: Memory) {
         if(left) {
             register.left = set(register.left, bit)
         } else {
-            register.right = set(register.left, bit)
+            register.right = set(register.right, bit)
         }
     }
 
@@ -1652,7 +1652,7 @@ class CPU(private val memory: Memory) {
         if(left) {
             register.left = reset(register.left, bit)
         } else {
-            register.right = reset(register.left, bit)
+            register.right = reset(register.right, bit)
         }
     }
 

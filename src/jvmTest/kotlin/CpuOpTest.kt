@@ -1691,7 +1691,7 @@ class CpuOpTest {
         assertEquals(0x102u, cpu.programCounter)
         assertEquals(8, cycleCount)
         assertEquals(0b0000_0001u, cpu.BC.left)
-        assertEquals(0b1010_0000u, cpu.AF.right)
+        assertEquals(0b0010_0000u, cpu.AF.right)
     }
 
     @Test
@@ -1705,7 +1705,7 @@ class CpuOpTest {
         assertEquals(0x102u, cpu.programCounter)
         assertEquals(8, cycleCount)
         assertEquals(0b0000_0000u, cpu.BC.left)
-        assertEquals(0b0010_0000u, cpu.AF.right)
+        assertEquals(0b1010_0000u, cpu.AF.right)
     }
 
     @Test
@@ -1719,7 +1719,7 @@ class CpuOpTest {
         assertEquals(0x102u, cpu.programCounter)
         assertEquals(8, cycleCount)
         assertEquals(0b1000_0000u, cpu.AF.left)
-        assertEquals(0b1010_0000u, cpu.AF.right)
+        assertEquals(0b0010_0000u, cpu.AF.right)
     }
 
     @Test
@@ -1747,6 +1747,20 @@ class CpuOpTest {
         assertEquals(0x102u, cpu.programCounter)
         assertEquals(8, cycleCount)
         assertEquals(0b0000_0001u, cpu.BC.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `SET 0 C | 0`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0xC1u)
+        cpu.BC.right = 0b0000_0000u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0001u, cpu.BC.right)
         assertEquals(0b0000_0000u, cpu.AF.right)
     }
 
@@ -1787,6 +1801,20 @@ class CpuOpTest {
         assertEquals(0x102u, cpu.programCounter)
         assertEquals(8, cycleCount)
         assertEquals(0b0000_0000u, cpu.BC.left)
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RES 0 C | 1`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x81u)
+        cpu.BC.right = 0b0000_0001u
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b0000_0000u, cpu.BC.right)
         assertEquals(0b0000_0000u, cpu.AF.right)
     }
 
