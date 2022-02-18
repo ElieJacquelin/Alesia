@@ -1155,23 +1155,27 @@ class CPU(private val memory: Memory) {
             // as it hard to make sense out of it
             0x27u -> op({
                 if (!AF.getNFlag()) { // Last operation was a sum
+                    var result = AF.left.toUInt()
                     // Check if carry or result is more than 9
-                    if (AF.getHalfCarryFlag() || AF.left.toUInt() and 0x0Fu > 9u) {
+                    if (AF.getHalfCarryFlag() || result and 0x0Fu > 0x9u) {
                         // Add correction to get correct binary coded decimal
-                        AF.left = (AF.left + 6u).toUByte()
+                        result += 0x6u
                     }
                     // Check for carry flag or if the left digit is also higher than 9 and also need correction
-                    if (AF.getCarryFlag() || AF.left.toUInt() > 99u) {
-                        AF.left = (AF.left + 60u).toUByte()
-                        AF.setCarryFlag(true) // Should be set for some reason
+                    if (AF.getCarryFlag() || result > 0x9Fu) {
+                        result += 0x60u
                     }
+                    if (result > 0xffu) {
+                        AF.setCarryFlag(true)
+                    }
+                    AF.left = result.toUByte()
                 } else {
                     // Checking for the flags but not for the value itself for some reason
                     if (AF.getHalfCarryFlag()) {
-                        AF.left = (AF.left - 6u).toUByte()
+                        AF.left = (AF.left - 0x6u).toUByte()
                     }
                     if (AF.getCarryFlag()) {
-                        AF.left = (AF.left - 60u).toUByte()
+                        AF.left = (AF.left - 0x60u).toUByte()
                     }
                 }
                 AF.setZeroFlag(AF.left.toUInt() == 0x0u)

@@ -1921,4 +1921,134 @@ class CpuOpTest {
         assertEquals(0x3458u, cpu.stackPointer)
         assertEquals(8, cycleCount)
     }
+
+    @Test
+    fun `DAA - Addition - no correction`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b0000_0001u
+        cpu.AF.right = 0x0u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b000_0001u, cpu.AF.left)
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - Addition - bottom correction`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b0000_1100u // last digit is 12 which more than 0x9, should be corrected by 0x6
+        cpu.AF.right = 0x0u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0001_0010u, cpu.AF.left)
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - Addition - Top correction`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b1100_0000u // first digit is 12 which more than 0x90, should be corrected by 0x60
+        cpu.AF.right = 0x0u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0010_0000u, cpu.AF.left)
+        assertEquals(true, cpu.AF.getCarryFlag())
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - Addition - Full correction`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b1100_1100u // Both digits are 12 and both should be corrected
+        cpu.AF.right = 0x0u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0011_0010u, cpu.AF.left)
+        assertEquals(true, cpu.AF.getCarryFlag())
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - Addition - Half Carry`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b0000_0010u // Last digit is 2 and should not be corrected
+        cpu.AF.right = 0b0010_0000u // But there is a half carry which forces the correction
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0000_1000u, cpu.AF.left)
+        assertEquals(false, cpu.AF.getHalfCarryFlag())
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - Addition - Carry`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b0000_0010u // First digit is 0 and should not be corrected
+        cpu.AF.right = 0b0001_0000u // But there is a carry which forces the correction
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0110_0010u, cpu.AF.left)
+        assertEquals(true, cpu.AF.getCarryFlag()) // Carry flag does not get reset for some reasons
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - Addition - both carry`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b0000_0010u // No digit should be corrected
+        cpu.AF.right = 0b0011_0000u // But there is are 2 carry which forces the correction
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0110_1000u, cpu.AF.left)
+        assertEquals(true, cpu.AF.getCarryFlag()) // Carry flag does not get reset for some reasons
+        assertEquals(false, cpu.AF.getHalfCarryFlag()) // Half Carry flag does get reset
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - subtraction - Half Carry`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b0000_1010u // Last digit is 10
+        cpu.AF.right = 0b0110_0000u // The half carry asks for a correction
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0000_0100u, cpu.AF.left)
+        assertEquals(false, cpu.AF.getHalfCarryFlag())
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - subtraction - Carry`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b1010_0000u // First digit is 10
+        cpu.AF.right = 0b0101_0000u // The carry asks for a correction
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0100_0000u, cpu.AF.left)
+        assertEquals(true, cpu.AF.getCarryFlag()) // Flag should not be reset for some reason
+        assertEquals(4, cycleCount)
+    }
+
+    @Test
+    fun `DAA - subtraction - both carry`() {
+        memory.set(0x100u, 0x27u)
+        cpu.AF.left = 0b1010_1010u // Both digits are 10
+        cpu.AF.right = 0b0111_0000u // And there is are 2 carry which forces the correction
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0b0100_0100u, cpu.AF.left)
+        assertEquals(true, cpu.AF.getCarryFlag()) // Carry flag does not get reset for some reasons
+        assertEquals(false, cpu.AF.getHalfCarryFlag()) // Half Carry flag does get reset
+        assertEquals(4, cycleCount)
+    }
 }
