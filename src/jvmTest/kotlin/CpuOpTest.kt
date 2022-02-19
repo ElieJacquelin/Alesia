@@ -565,6 +565,19 @@ class CpuOpTest {
     }
 
     @Test
+    fun `LD HL SP,n`() {
+        memory.set(0x100u, 0xF8u)
+        memory.set(0x101u, 0x02u)
+        cpu.stackPointer=0x1234u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter) // forward 2 steps
+        assertEquals(12, cycleCount)
+        assertEquals(0x1236u, cpu.HL.both())
+        assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
     fun `LD SP, HL`() {
         memory.set(0x100u, 0xF9u)
         cpu.HL.setBoth(0x1213u)
@@ -1242,20 +1255,38 @@ class CpuOpTest {
     }
 
     @Test
-    fun `ADD-16 SP, n | carry`() {
+    fun `ADD-16 SP, n | negative`() {
         memory.set(0x100u, 0xE8u)
-        memory.set(0x101u, 0xF1u)
+        memory.set(0x101u, 0xFFu)
         cpu.stackPointer = 0x1234u
         cpu.AF.right = 0u
 
-        // 0x1234 + 0xF1 = 0x1325
+        // 0x1234 + 0xFF (0x-1) = 0x1233
+        // Carry flag true => 0xFF and 0x0F => 0xF (15) which is high enough to trigger carry
+        // Half carry true => 0xFF and 0x0F => 0xF (15) which is high enough to trigger carry
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0x1233u, cpu.stackPointer)
+        assertEquals(0b00110000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `ADD-16 SP, n | carry`() {
+        memory.set(0x100u, 0xE8u)
+        memory.set(0x101u, 0x51u)
+        cpu.stackPointer = 0x12F4u
+        cpu.AF.right = 0u
+
+        // 0x12F4 + 0x51 = 0x1345
         // Carry flag true
         // Half carry false
 
         val cycleCount = cpu.tick()
         assertEquals(0x102u, cpu.programCounter)
         assertEquals(16, cycleCount)
-        assertEquals(0x1325u, cpu.stackPointer)
+        assertEquals(0x1345u, cpu.stackPointer)
         assertEquals(0b00010000u, cpu.AF.right)
     }
 

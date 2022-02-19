@@ -213,23 +213,16 @@ class CPU(private val memory: Memory) {
 
             // LD SP,HL
             0xF9u -> op({ stackPointer = HL.both() }, 8)
-            //  LDHL SP,n
-            // TODO To be tested, unsure about carry flags implementation
+            // LD HL SP,n
             0xF8u -> op({
-                val n = readOp().toByte() // Next byte is signed
-                val result = stackPointer.toInt() + n
+                val number = readOp().toByte() // Next byte is signed
+                val result = stackPointer.toInt() + number
                 HL.setBoth((result).toUShort())
-                AF.resetFlags()
+
                 AF.setZeroFlag(false)
                 AF.setSubtractFlag(false)
-                AF.setSubtractFlag(false)
-                if (n >= 0) {
-                    AF.setCarryFlag((result and 0xff) < (stackPointer.toInt() and 0xff)) // Check if carry by checking if the stackpointer transposed to a byte is bigger than before the operation
-                    AF.setHalfCarryFlag((result and 0xf) < (stackPointer.toInt() and 0xf)) // Check if carry on the if the stackpointer transposed to 4bits is bigger than after the operation
-                } else {
-                    AF.setCarryFlag((result and 0xff) > (stackPointer.toInt() and 0xff)) // Check if carry by checking if the stackpointer transposed to a byte is smaller than before the operation
-                    AF.setHalfCarryFlag((result and 0xf) > (stackPointer.toInt() and 0xf)) // Check if carry on the if the stackpointer transposed to 4bits is smalelr than after the operation
-                }
+                AF.setHalfCarryFlag((stackPointer.toInt() and 0x000F) + (number.toInt() and 0x000F) > 0X000F)
+                AF.setCarryFlag((stackPointer.toInt() and 0x00FF) + (number.toInt() and 0x00FF) > 0X00FF)
             }, 12)
             // LD(nn), SP
             0x08u -> op({
@@ -491,11 +484,12 @@ class CPU(private val memory: Memory) {
 
             // ADD SP, n
             0xE8u -> op({
-                val number = readOp()
-                val result = number + stackPointer
+                val number = readOp().toByte() // Number is signed
+                val result = number + stackPointer.toShort()
                 AF.setNFlag(false)
-                AF.setHalfCarryFlag((stackPointer and 0x000Fu) + (number and 0x000Fu) > 0X00Fu)
-                AF.setCarryFlag((stackPointer and 0x00FFu) + (number and 0x00FFu) > 0X0FFu)
+                AF.setZeroFlag(false)
+                AF.setHalfCarryFlag((stackPointer.toInt() and 0x000F) + (number.toInt() and 0x000F) > 0X000F)
+                AF.setCarryFlag((stackPointer.toInt() and 0x00FF) + (number.toInt() and 0x00FF) > 0X00FF)
                 stackPointer = result.toUShort()
             }, 16)
 
