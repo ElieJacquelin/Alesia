@@ -442,9 +442,7 @@ class CPU(private val memory: Memory) {
                 memory.set(HL.both(), result)
                 AF.setZeroFlag(result.toUInt() == 0u)
                 AF.setNFlag(false)
-                if ((result and 0x0Fu).toUInt() == 0x00u) {
-                    AF.setHalfCarryFlag(true)
-                }
+                AF.setHalfCarryFlag((result and 0x0Fu).toUInt() == 0x00u)
             }, 12)
 
             // DEC A
@@ -467,9 +465,7 @@ class CPU(private val memory: Memory) {
                 memory.set(HL.both(), result)
                 AF.setZeroFlag(result.toUInt() == 0u)
                 AF.setNFlag(false)
-                if ((result and 0x0Fu).toUInt() == 0x0Fu) {
-                    AF.setHalfCarryFlag(true)
-                }
+                AF.setHalfCarryFlag((result and 0x0Fu).toUInt() == 0x0Fu)
             }, 12)
 
             // 16 bit arithmetic
@@ -1177,7 +1173,11 @@ class CPU(private val memory: Memory) {
             }, 4)
 
             // CPL A
-            0x2Fu -> op({ AF.left = AF.left.inv() }, 4)
+            0x2Fu -> op({
+                AF.left = AF.left.inv()
+                AF.setNFlag(true)
+                AF.setHalfCarryFlag(true)
+            }, 4)
             // CCF
             0x3Fu -> op({
                 AF.setNFlag(false)
@@ -1361,21 +1361,22 @@ class CPU(private val memory: Memory) {
     private inline fun addCarryOp(number: UByte) {
         val carryValue = if (AF.getCarryFlag()) 1u else 0u
         val result = AF.left + number + carryValue
-        AF.left = (result).toUByte()
         AF.setZeroFlag(result.toUByte() == (0u).toUByte())
         AF.setNFlag(false)
         AF.setHalfCarryFlag((AF.left and 0x0Fu) + (number and 0x0Fu) + carryValue > 0X0Fu)
         AF.setCarryFlag(result > 0xFFu)
+        AF.left = (result).toUByte()
     }
 
     private inline fun subCarryOp(number: UByte) {
         val carryValue = if (AF.getCarryFlag()) 1u else 0u
         val result = AF.left - number - carryValue
-        AF.left = (result).toUByte()
+        val carriedBits = result xor AF.left.toUInt() xor number.toUInt()
         AF.setZeroFlag(result.toUByte() == (0u).toUByte())
         AF.setNFlag(true)
-        AF.setHalfCarryFlag((number.toUInt() and 0b00001000u) and (result and 0b00001000u) > 0u)
-        AF.setCarryFlag((number.toUInt() and 0b10000000u) and (result and 0b10000000u) > 0u) // Shifting bits would work but requires to shift from UInt to UByte to UInt again
+        AF.setHalfCarryFlag((carriedBits and 0x10u) != 0u)
+        AF.setCarryFlag((carriedBits and 0x100u) != 0u)
+        AF.left = (result).toUByte()
     }
 
     private inline fun andOp(number: UByte) {
@@ -1419,9 +1420,7 @@ class CPU(private val memory: Memory) {
         }
         AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
-        if ((result and 0x0Fu).toUInt() == 0x00u) {
-            AF.setHalfCarryFlag(true)
-        }
+        AF.setHalfCarryFlag((result and 0x0Fu).toUInt() == 0x00u)
     }
 
     private inline fun decOp(register: SplitRegister, left: Boolean) {
@@ -1430,11 +1429,9 @@ class CPU(private val memory: Memory) {
         } else {
             --register.right
         }
-        AF.setZeroFlag(result.toUInt() == 0u)
-        AF.setNFlag(false)
-        if ((result and 0x0Fu).toUInt() == 0x0Fu) {
-            AF.setHalfCarryFlag(true)
-        }
+        AF.setZeroFlag(result == (0u).toUByte())
+        AF.setNFlag(true)
+        AF.setHalfCarryFlag((result and 0x0Fu).toUInt() == 0x0Fu)
     }
 
     private inline fun add16Op(number: UShort) {
@@ -1452,7 +1449,7 @@ class CPU(private val memory: Memory) {
             AF.setZeroFlag(register.left.toUInt() == 0x0u)
         } else {
             register.right = ((register.right.toUInt() shr 4) + ((register.right and 0xFu).toUInt() shl 4)).toUByte()
-            AF.setZeroFlag(register.left.toUInt() == 0x0u)
+            AF.setZeroFlag(register.right.toUInt() == 0x0u)
         }
     }
 
@@ -1503,8 +1500,7 @@ class CPU(private val memory: Memory) {
         AF.setZeroFlag(result.toUInt() == 0u)
         AF.setNFlag(false)
         AF.setHalfCarryFlag(false)
-        AF.setCarryFlag(newCarry > 0u)
-
+        AF.setCarryFlag(newCarry != 0u)
     }
 
     private inline fun RR(register: SplitRegister, left: Boolean) {

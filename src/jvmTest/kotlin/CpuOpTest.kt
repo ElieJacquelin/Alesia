@@ -818,14 +818,33 @@ class CpuOpTest {
 
         // 11111111 + 00000001 = 100000000 => 00000000
         // Carry flag true
-        // Half carry false
+        // Half carry true
         // Zero flag true
 
         val cycleCount = cpu.tick()
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b00000000u, cpu.AF.left)
-        assertEquals(0b10010000u, cpu.AF.right)
+        assertEquals(0b10110000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `ADC A, B | Carry`() {
+        memory.set(0x100u, 0x88u)
+        cpu.AF.left = 0b11111100u
+        cpu.AF.right= 0b0001_0000u
+        cpu.BC.left = 1u
+
+        // 11111100 + 00000001 + 1 = 11111110
+        // Carry flag false
+        // Half carry false
+        // Zero flag false
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b11111110u, cpu.AF.left)
+        assertEquals(0b00000000u, cpu.AF.right)
     }
 
     @Test
@@ -1113,6 +1132,19 @@ class CpuOpTest {
     }
 
     @Test
+    fun `INC A | Unset half carry`() {
+        memory.set(0x100u, 0x3Cu)
+        cpu.AF.left = 0b00101110u
+        cpu.AF.right = 0b0010_0000u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b00101111u, cpu.AF.left)
+        assertEquals(0b00000000u, cpu.AF.right)
+    }
+
+    @Test
     fun `DEC A`() {
         memory.set(0x100u, 0x3Du)
         cpu.AF.left = 0b00100100u
@@ -1122,7 +1154,7 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b00100011u, cpu.AF.left)
-        assertEquals(0b00000000u, cpu.AF.right)
+        assertEquals(0b01000000u, cpu.AF.right)
     }
 
     @Test
@@ -1135,7 +1167,7 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b00001111u, cpu.AF.left)
-        assertEquals(0b00100000u, cpu.AF.right)
+        assertEquals(0b01100000u, cpu.AF.right)
     }
 
     @Test
@@ -1148,7 +1180,7 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b00001111u, cpu.AF.left)
-        assertEquals(0b00100000u, cpu.AF.right)
+        assertEquals(0b01100000u, cpu.AF.right)
     }
 
     @Test
@@ -1161,7 +1193,20 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b00000000u, cpu.AF.left)
-        assertEquals(0b10000000u, cpu.AF.right)
+        assertEquals(0b11000000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `DEC A | Unset half carry`() {
+        memory.set(0x100u, 0x3Du)
+        cpu.AF.left = 0b00000010u
+        cpu.AF.right = 0b00100000u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(4, cycleCount)
+        assertEquals(0b00000001u, cpu.AF.left)
+        assertEquals(0b01000000u, cpu.AF.right)
     }
 
     @Test
@@ -1369,6 +1414,18 @@ class CpuOpTest {
     }
 
     @Test
+    fun `SWAP C`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x31u)
+        cpu.BC.right = 0x12u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0x21u, cpu.BC.right)
+    }
+
+    @Test
     fun `SWAP (HL)`() {
         memory.set(0x100u, 0xCBu)
         memory.set(0x101u, 0x36u)
@@ -1385,11 +1442,13 @@ class CpuOpTest {
     fun `CPL A`() {
         memory.set(0x100u, 0x2Fu)
         cpu.AF.left = 0b11001010u
+        cpu.AF.right = 0x0u
 
         val cycleCount = cpu.tick()
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b00110101u, cpu.AF.left)
+        assertEquals(0b0110_0000u, cpu.AF.right)
     }
 
     @Test
