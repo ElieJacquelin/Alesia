@@ -343,8 +343,10 @@ class CPU(private val memory: Memory) {
             0x9Cu -> op({ subCarryOp(HL.left) }, 4)
             // SUBC A, L
             0x9Du -> op({ subCarryOp(HL.right) }, 4)
-            // SUBC A, (HLsub
+            // SUBC A, (HL)
             0x9Eu -> op({ subCarryOp(memory.get(HL.both())) }, 8)
+            // SUBC A, n
+            0xDEu -> op({ subCarryOp(readOp()) }, 8)
 
             // AND A, A
             0xA7u -> op({ andOp(AF.left) }, 4)

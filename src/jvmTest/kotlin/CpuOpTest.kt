@@ -1014,6 +1014,24 @@ class CpuOpTest {
     }
 
     @Test
+    fun `SUBC A, n | no carry`() {
+        memory.set(0x100u, 0xDEu)
+        memory.set(0x101u, 0b00000011u)
+        cpu.AF.left = 0b01000011u
+        cpu.AF.right = 0u
+
+        // 01000011 - 00000011 = 01000000
+        // Carry flag false
+        // Half carry false
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(8, cycleCount)
+        assertEquals(0b01000000u, cpu.AF.left)
+        assertEquals(0b01000000u, cpu.AF.right)
+    }
+
+    @Test
     fun `AND A, B`() {
         memory.set(0x100u, 0xA0u)
         cpu.AF.left = 0b00100110u
