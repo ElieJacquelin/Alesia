@@ -1210,6 +1210,20 @@ class CpuOpTest {
     }
 
     @Test
+    fun `DEC HL`() {
+        memory.set(0x100u, 0x35u)
+        cpu.AF.right = 0u
+        cpu.HL.setBoth(0x1234u)
+        memory.set(0x1234u, 0b0000_1000u)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(12, cycleCount)
+        assertEquals(0b0000_0111u, memory.get(0x1234u))
+        assertEquals(0b01000000u, cpu.AF.right)
+    }
+
+    @Test
     fun `ADD-16 HL, BC`() {
         memory.set(0x100u, 0x09u)
         cpu.AF.right = 0u
@@ -1539,6 +1553,21 @@ class CpuOpTest {
     }
 
     @Test
+    fun `RL (HL)`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x16u)
+        cpu.AF.right = 0b00000_0000u
+        cpu.HL.setBoth(0x1234u)
+        memory.set(0x1234u, 0b1100_1100u)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0b1001_1000u, memory.get(0x1234u))
+        assertEquals(0b0001_0000u, cpu.AF.right)
+    }
+
+    @Test
     fun `RRCA`() {
         memory.set(0x100u, 0x0Fu)
         cpu.AF.left = 0b0100_1011u
@@ -1575,6 +1604,21 @@ class CpuOpTest {
         assertEquals(4, cycleCount)
         assertEquals(0b0000_1000u, cpu.AF.left)
         assertEquals(0b0000_0000u, cpu.AF.right)
+    }
+
+    @Test
+    fun `RRC (HL)`() {
+        memory.set(0x100u, 0xCBu)
+        memory.set(0x101u, 0x0Eu)
+        cpu.HL.setBoth(0x1234u)
+        memory.set(0x1234u, 0b0100_1011u)
+        cpu.AF.right = 0b0000_0000u
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
+        assertEquals(16, cycleCount)
+        assertEquals(0b10100_101u, memory.get(0x1234u))
+        assertEquals(0b0001_0000u, cpu.AF.right)
     }
 
     @Test

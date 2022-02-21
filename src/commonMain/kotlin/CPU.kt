@@ -464,7 +464,7 @@ class CPU(private val memory: Memory) {
                 val result = (memory.get(HL.both()) - 1u).toUByte()
                 memory.set(HL.both(), result)
                 AF.setZeroFlag(result.toUInt() == 0u)
-                AF.setNFlag(false)
+                AF.setNFlag(true)
                 AF.setHalfCarryFlag((result and 0x0Fu).toUInt() == 0x0Fu)
             }, 12)
 
@@ -584,7 +584,7 @@ class CPU(private val memory: Memory) {
                         AF.setZeroFlag(result.toUInt() == 0u)
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
-                        AF.setCarryFlag(newCarry == 1u)
+                        AF.setCarryFlag(newCarry != 0u)
                     }, 16)
 
                     //RRC A
@@ -608,6 +608,7 @@ class CPU(private val memory: Memory) {
                         AF.setNFlag(false)
                         AF.setHalfCarryFlag(false)
                         AF.setCarryFlag(result.toUInt() and 0b1000_0000u > 0u)
+                        memory.set(HL.both(), result)
                     }, 16)
 
                     //RR A
