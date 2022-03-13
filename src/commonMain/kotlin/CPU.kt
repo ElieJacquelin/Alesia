@@ -13,6 +13,9 @@ class CPU(private val memory: Memory) {
     var interruptMasterEnabled: Boolean = false
     var halt: Boolean = false
 
+    val devTriggerCycles = 4096 // Every 4096, the DEV register should increment
+    var devCycleCount = devTriggerCycles
+
     init {
         AF.left = 0x01u
         AF.right = 0xB0u
@@ -28,6 +31,7 @@ class CPU(private val memory: Memory) {
     fun tick(): Int {
         val instruction = this.readOp()
         val (cycleCount, actionAfterInstruction) = decodeAndExecute(instruction)
+        updateTimers(cycleCount)
         handleInterrupts()
         // wait for interruption if CPU has been halted
         while (halt) {
@@ -35,6 +39,15 @@ class CPU(private val memory: Memory) {
         }
         actionAfterInstruction?.invoke()
         return cycleCount
+    }
+
+    private fun updateTimers(cycles: Int) {
+        devCycleCount -= cycles
+        if (devCycleCount <= 0) {
+            // Enough cycles has passed, the dev timer should be incremented
+            memory.incrementDiv()
+            devCycleCount = devTriggerCycles
+        }
     }
 
     private fun handleInterrupts() {

@@ -52,6 +52,19 @@ class Memory {
                 set((0xFE00u + index.toUInt()).toUShort(), get(sourceAddress.toUShort()))
             }
             // TODO add DMA cycle time
+        } else if (address == 0xFF04u.toUShort()) {
+            // Reset DIV
+            memory[address.toInt()] = 0u
         }
+    }
+
+    fun incrementDiv() {
+        val address = (0xFF04u).toInt()
+        memory[address]++
+    }
+
+    fun loadRom(rom: UByteArray) {
+        // The rom takes the first 32kb of memory
+        rom.copyInto(memory)
     }
 }
