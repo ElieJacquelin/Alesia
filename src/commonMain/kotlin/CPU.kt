@@ -13,8 +13,8 @@ class CPU(private val memory: Memory) {
     var interruptMasterEnabled: Boolean = false
     var halt: Boolean = false
 
-    val devTriggerCycles = 4096 // Every 4096, the DEV register should increment
-    var devCycleCount = devTriggerCycles
+    var divCycleCount = 0
+    var timerCycleCount = 0
 
     init {
         AF.left = 0x01u
@@ -42,12 +42,49 @@ class CPU(private val memory: Memory) {
     }
 
     private fun updateTimers(cycles: Int) {
-        devCycleCount -= cycles
-        if (devCycleCount <= 0) {
-            // Enough cycles has passed, the dev timer should be incremented
+        // DIV register
+        divCycleCount += cycles
+        if (divCycleCount >= 256) {
+            // Enough cycles has passed, the div register should be incremented
             memory.incrementDiv()
-            devCycleCount = devTriggerCycles
+            divCycleCount -= 256
         }
+
+        // TIMA
+        // Timer control determines if the timer is paused and at which frequency it should trigger
+        val timerControl = memory.get(0xFF07u)
+        val timerEnable = timerControl and 0b0100u
+        if (timerEnable > 0u) {
+            val timerPeriod = timerControl and 0b11u
+            val timerFrequencyCycles = when (timerPeriod.toUInt()) {
+                0b00u -> 1024
+                0b01u -> 16
+                0b10u -> 64
+                0b11u -> 256
+                else -> throw Exception("Invalid timer frequency")
+            }
+
+            timerCycleCount += cycles
+            while (timerCycleCount >= timerFrequencyCycles) {
+                // Enough cycle has passed, the timer should be incremented
+                val tima = memory.get(0xFF05u).toUInt()
+                if (tima == 0xFFu) {
+                    // tima will overflow, value should be reset to the TMA register
+                    memory.set(0xFF05u, memory.get(0xFF06u))
+                    // Interrupt timer is set
+                    setInterrupt(2)
+                } else {
+                    memory.set(0xFF05u, (tima + 1u).toUByte())
+                }
+                timerCycleCount -= timerFrequencyCycles
+            }
+        }
+    }
+
+    private fun setInterrupt(bit: Int) {
+        var interrupt = memory.get(0xFF0Fu)
+        interrupt = interrupt or (1u shl bit).toUByte()
+        memory.set(0xFF0Fu, interrupt)
     }
 
     private fun handleInterrupts() {
@@ -76,14 +113,15 @@ class CPU(private val memory: Memory) {
         interruptMasterEnabled = false
         memory.set(0xFF0Fu, memory.get(0xFF0Fu) or (1u shl bit).toUByte())
 
-        //TODO wait 2 cycles. More generally handle cycles for the interrupt routine
-
         // Store current instruction in the stackpointer
         storeShortToStack(programCounter)
         // Jump to the interruption handler
         programCounter = jumpAddress
         // Reset halt
         halt = false
+
+        // 20 clock cycle have passed handling the different interrupt operations
+        updateTimers(20)
     }
 
     private fun decodeAndExecute(instruction: UByte): Pair<Int, (() -> Unit)?> {
