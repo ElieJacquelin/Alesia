@@ -1,60 +1,81 @@
 package rendering
 
 import ColorID
-import LcdControlRegister
 import Memory
 import Pixel
 
 @ExperimentalUnsignedTypes
-class PixelFetcher(private val controlRegister: LcdControlRegister, private val memory: Memory, private val backgroundFiFo: ArrayDeque<Pixel>, internal var LY: Int) {
+class PixelFetcher(private val controlRegister: LcdControlRegister, private val memory: Memory) {
 
     internal sealed class State {
-        object GetTile : State()
-        data class GetTileDataLow(val tileID: UByte): State()
-        data class GetTileDataHigh(val tileID: UByte, val tileLowData: UByte): State()
-        data class Push(val tileLowData: UByte, val tileHighData: UByte): State()
+        data class GetTile(val sharedState: SharedState, val dotCount: Int = 0) : State()
+        data class GetTileDataLow(val sharedState: SharedState, val tileID: UByte, val dotCount: Int = 0): State()
+        data class GetTileDataHigh(val sharedState: SharedState, val tileID: UByte, val tileLowData: UByte, val dotCount: Int = 0): State()
+        data class Push(val sharedState: SharedState, val tileLowData: UByte, val tileHighData: UByte): State()
     }
 
-    // The pixel fetcher goes through each tile in the tile map and return the next 8 pixel to be displayed
-    private var currentTileMapOffset = 0u
-    internal var state: State = State.GetTile
+    internal data class SharedState(val currentTileMapOffset: UInt, val currentLine: Int, val backgroundFiFo: ArrayDeque<Pixel>)
+
+    internal lateinit var state: State
+
+    fun reset(lineNumber: Int, backgroundFiFo: ArrayDeque<Pixel>) {
+        state = State.GetTile(SharedState(0u, lineNumber, backgroundFiFo))
+    }
 
     fun tick() {
         when (state) {
-            is State.GetTile -> getTileStep()
-            is State.GetTileDataLow -> getTileDataLowStep((state as State.GetTileDataLow).tileID)
-            is State.GetTileDataHigh -> getTileDataHighStep((state as State.GetTileDataHigh).tileID, (state as State.GetTileDataHigh).tileLowData)
-            is State.Push -> pushToFifoStep((state as State.Push).tileLowData, (state as State.Push).tileHighData)
+            is State.GetTile -> getTileStep(state as State.GetTile)
+            is State.GetTileDataLow -> getTileDataLowStep(state as State.GetTileDataLow)
+            is State.GetTileDataHigh -> getTileDataHighStep(state as State.GetTileDataHigh)
+            is State.Push -> pushToFifoStep(state as State.Push)
         }
     }
 
-    private fun getTileStep() {
-        // TODO handle scrolling
-        val mapTile = if (controlRegister.getBgTileMap()) 0x9C00u else 0x9800u
-        val tileID =  memory.get((mapTile + currentTileMapOffset).toUShort())
+    private fun getTileStep(state: State.GetTile) {
+        val (currentTileMapOffset) = state.sharedState
+        if (state.dotCount >= 1) {
+            // TODO handle scrolling
+            val mapTile = if (controlRegister.getBgTileMap()) 0x9C00u else 0x9800u
+            val tileID =  memory.get((mapTile + currentTileMapOffset).toUShort())
 
-        state = State.GetTileDataLow(tileID)
+            this.state = State.GetTileDataLow(state.sharedState, tileID)
+            return
+        }
+        // Get tile step lasts 2 dots, do nothing for the first dot
+        this.state = State.GetTile(state.sharedState, state.dotCount + 1)
     }
 
-    private fun getTileDataLowStep(tileID: UByte) {
-        val tileLowData = getTileDataStep(tileID, true)
-        state = State.GetTileDataHigh(tileID, tileLowData)
+    private fun getTileDataLowStep(state: State.GetTileDataLow) {
+        val (_, currentLine) = state.sharedState
+        if (state.dotCount >= 1) {
+            val tileLowData = getTileDataStep(state.tileID, true, currentLine)
+            this.state = State.GetTileDataHigh(sharedState = state.sharedState, tileID = state.tileID, tileLowData = tileLowData)
+            return
+        }
+        // Get Tile data low step lasts 2 dots, do nothing for the first dot
+        this.state = State.GetTileDataLow(state.sharedState, state.tileID, state.dotCount + 1)
     }
 
-    private fun getTileDataHighStep(tileID: UByte, tileLowData: UByte) {
-        val tileHighData = getTileDataStep(tileID, false)
+    private fun getTileDataHighStep(state: State.GetTileDataHigh) {
+        val (_, currentLine) = state.sharedState
+        if (state.dotCount >= 1) {
+            val tileHighData = getTileDataStep(state.tileID, false, currentLine)
 
-        state = State.Push(tileLowData, tileHighData)
-        pushToFifoStep(tileLowData, tileHighData) // This step does an extra push without waiting for the next tick
+            this.state = State.Push(state.sharedState, state.tileLowData, tileHighData)
+            pushToFifoStep(this.state as State.Push) // This step does an extra push without waiting for the next tick
+            return
+        }
+        // Get Tile data high step lasts 2 dots, do nothing for the first dot
+        this.state = State.GetTileDataHigh(state.sharedState, state.tileID, state.tileLowData, state.dotCount + 1)
     }
 
-    private fun getTileDataStep(tileID: UByte, low: Boolean): UByte {
+    private fun getTileDataStep(tileID: UByte, low: Boolean, currentLine: Int): UByte {
         var tileAddress = getTileAddress(tileID)
         if (!low) {
             tileAddress ++
         }
         // The screen renders a matrix of 8x8 sprites, getting the modulo by 8 of the current line being rendered tells you which line of the current sprite is being drawn
-        val currentSpriteLine = LY.mod(8).toUInt()
+        val currentSpriteLine = currentLine.mod(8).toUInt()
         return getTileLineData(tileAddress, currentSpriteLine)
     }
 
@@ -77,7 +98,8 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
         return memory.get((tileAddress + 2u * lineSprite).toUShort())
     }
 
-    private fun pushToFifoStep(tileLowData: UByte, tileHighData: UByte) {
+    private fun pushToFifoStep(state: State.Push) {
+        val (_, _, backgroundFiFo) = state.sharedState
         if(!backgroundFiFo.isEmpty()) {
             // Stay in the same step until it succeed
             return
@@ -86,13 +108,13 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
         val pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, false) }
         for (x in 0..7) {
             // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
-            val first = if (tileHighData and (1u shl (7 - x)).toUByte() >= 1u) {
+            val first = if (state.tileHighData and (1u shl (7 - x)).toUByte() >= 1u) {
                 0x10u
             } else {
                 0u
             }
 
-            val second = if (tileLowData and (1u shl (7 - x)).toUByte() >= 1u) {
+            val second = if (state.tileLowData and (1u shl (7 - x)).toUByte() >= 1u) {
                 0x1u
             } else {
                 0u
@@ -111,8 +133,9 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
         // Push to Fifo
         backgroundFiFo.addAll(pixelRow)
         // Move to the next tile to be rendered
-        currentTileMapOffset = if(currentTileMapOffset == 31u) 0u else currentTileMapOffset++
+        val newTileMapOffset = if(state.sharedState.currentTileMapOffset == 31u) 0u else state.sharedState.currentTileMapOffset + 1u
+        val newSharedState = state.sharedState.copy(currentTileMapOffset = newTileMapOffset)
 
-        state = State.GetTile
+        this.state = State.GetTile(newSharedState)
     }
 }

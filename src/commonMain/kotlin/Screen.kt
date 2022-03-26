@@ -1,16 +1,158 @@
+import rendering.LcdControlRegister
 import rendering.PixelFetcher
 
-class Screen (val memory: Memory) {
-    val controlRegister = LcdControlRegister()
-    val pixels = Array(160) {Array(144) { Pixel(ColorID.ZERO, 0, false) } }
-    val scrollX: Int = 0
-    val scrollY: Int = 0
-    val windowPosX: Int = 0
-    val windowPosY: Int = 0
+@OptIn(ExperimentalUnsignedTypes::class)
+class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdControlRegister(), backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), pixelFetcher: PixelFetcher = PixelFetcher(controlRegister, memory)) {
     var tiles = generateTiles()
     var OAM = generateOAM()
+    internal var state: State = State.OAMScan(SharedState(0, 0,  List(160) { ArrayList() }, backgroundFifo, pixelFetcher))
 
-    fun generateOAM(): Array<Object> {
+    internal sealed class State {
+        data class HorizontalBlank(val sharedState: SharedState, val dotCountInStep: Int = 0): State()
+        data class VerticalBlank(val sharedState: SharedState): State()
+        data class OAMScan(val sharedState: SharedState): State()
+        data class DrawPixels(val sharedState: SharedState): State()
+    }
+
+    internal data class SharedState(val currentLineDotCount: Int, val currentLine: Int, val frame: List<ArrayList<Pixel>>, val backgroundFifo: ArrayDeque<Pixel>, val pixelFetcher: PixelFetcher)
+
+    // Each tick represents 1 dot
+    fun tick() {
+        when (state) {
+            is State.OAMScan -> oamScan(state as State.OAMScan)
+            is State.DrawPixels -> drawingPixel(state as State.DrawPixels)
+            is State.HorizontalBlank -> horizontalBlankState(state as State.HorizontalBlank)
+            is State.VerticalBlank -> verticalBlankState(state as State.VerticalBlank)
+        }
+    }
+
+    private fun oamScan(state: State.OAMScan) {
+        val (currentLineDotCount) = state.sharedState
+        if (currentLineDotCount == 0) {
+            // Start of a new line, we can generate the OAM list
+            // It might make sense to generate the OAM progressively in case the memory is being updated
+            generateOAM()
+            setStatMode(state)
+            triggerStatInterruptIfNeeded()
+        }
+        val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
+        // The OAM scan mode is meant to last 80 dots before moving to the next mode
+        if (currentLineDotCount >= 79) {
+            this.state = State.DrawPixels(newSharedState)
+        } else {
+            this.state = State.OAMScan(newSharedState)
+        }
+    }
+
+    private fun drawingPixel(state: State.DrawPixels) {
+        val (currentLineDotCount, currentLine, frame, backgroundFifo, pixelFetcher) = state.sharedState
+        if (currentLineDotCount == 80) {
+            // Resets fifo and fetcher to prepare them for the current line
+            backgroundFifo.clear()
+            pixelFetcher.reset(currentLine, backgroundFifo)
+
+            setStatMode(state)
+        }
+
+        // Advance the fetcher one tick
+        pixelFetcher.tick()
+        // Start emptying the fifo, one pixel at a time
+        val pixel = backgroundFifo.removeFirstOrNull()
+        val currentLinePixels = frame[currentLine]
+        if (pixel != null) {
+            currentLinePixels.add(pixel)
+        }
+
+        val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
+        if (currentLinePixels.size >= 160) {
+            // The full line has been generated, we can move on to the next step
+            this.state = State.HorizontalBlank(newSharedState)
+            return
+        }
+        // Continue drawing pixels
+        this.state = State.DrawPixels(newSharedState)
+    }
+
+    private fun setStatInterrupt() {
+        var interrupt = memory.get(0xFF0Fu)
+        interrupt = interrupt or (1u shl 1).toUByte()
+        memory.set(0xFF0Fu, interrupt)
+    }
+
+    private fun setStatMode(state: State) {
+        val stat = memory.get(0xFF41u).and(0b1111_1100u) // Reset first 2 bits to facilitate setting the mode after
+        val newStat = when (state) {
+            is State.OAMScan -> stat.or(0b10u) //Bit 1-0: 10
+            is State.DrawPixels -> stat.or(0b11u) //Bit 1-0: 11
+            is State.HorizontalBlank -> stat.or(0b00u) //Bit 1-0: 00
+            is State.VerticalBlank -> stat.or(0b01u) //Bit 1-0: 01
+        }
+        memory.set(0xFF41u, newStat)
+    }
+
+    private fun triggerStatInterruptIfNeeded() {
+        val stat = memory.get(0xFF41u)
+        val currentMode = stat.and(0b11u) // First two bits describe the current mode
+        when (currentMode.toUInt()) {
+            0u -> if(stat.and(0b1000u) > 0u) setStatInterrupt() // HBlank
+            1u -> if(stat.and(0b10000u) > 0u) setStatInterrupt() // VBlank
+            2u -> if(stat.and(0b100000u) > 0u) setStatInterrupt() // OAM Search
+            4u -> {} // Transferring data to LCD doesn't trigger interrupt
+        }
+    }
+
+    private fun horizontalBlankState(state: State.HorizontalBlank) {
+        if (state.dotCountInStep == 0) {
+            setStatMode(state)
+            // Trigger horizontal blank interrupt on the first dot
+            triggerStatInterruptIfNeeded()
+        }
+        if (state.sharedState.currentLineDotCount == 456) {
+            // Reached the end of HBlank, go for the next line or VBlank
+            val newSharedState = state.sharedState.copy(currentLineDotCount = 0, currentLine = state.sharedState.currentLine + 1)
+            if (state.sharedState.currentLine == 143) {
+                this.state = State.VerticalBlank(newSharedState)
+            } else {
+                this.state = State.OAMScan(newSharedState)
+            }
+            return
+        }
+
+        // Continue HBlank
+        val currentLintDotCount = state.sharedState.currentLineDotCount
+        this.state = State.HorizontalBlank(state.sharedState.copy(currentLineDotCount = currentLintDotCount + 1), state.dotCountInStep + 1)
+    }
+
+    private fun setVBlankInterrupt() {
+        var interrupt = memory.get(0xFF0Fu)
+        interrupt = interrupt or (1u).toUByte()
+        memory.set(0xFF0Fu, interrupt)
+    }
+
+    private fun verticalBlankState(state: State.VerticalBlank) {
+        if (state.sharedState.currentLineDotCount == 0) {
+            setStatMode(state)
+            // Trigger Vertical blank interrupt on the first dot
+            triggerStatInterruptIfNeeded()
+            // Also trigger "main" vertical blank interrupt
+            setVBlankInterrupt()
+        }
+        if (state.sharedState.currentLineDotCount == 456) {
+            // Reached the end of current line, go for the next line or new frame
+            if (state.sharedState.currentLine == 153) {
+                this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0))
+            } else {
+                this.state = State.VerticalBlank(state.sharedState.copy(currentLine = state.sharedState.currentLine + 1, currentLineDotCount = 0))
+            }
+            return
+        }
+
+        // Continue VBlank
+        val currentLintDotCount = state.sharedState.currentLineDotCount
+        this.state = State.VerticalBlank(state.sharedState.copy(currentLineDotCount = currentLintDotCount + 1))
+    }
+
+    private fun generateOAM(): Array<Object> {
         val result = mutableListOf<Object>()
         for(objectAddress in 0xFE00u..0xFE9Fu step 4) {
             result.add(Object(objectAddress.toUShort()))
@@ -32,17 +174,6 @@ class Screen (val memory: Memory) {
         }
         tiles = result.toTypedArray()
         return tiles
-    }
-
-    fun renderFrame() {
-        for (LY in 0..153) {
-            renderLine(LY)
-        }
-    }
-
-    private fun renderLine(LY: Int) {
-        val backgroundFifo = ArrayDeque<Pixel>()
-        val pixelFetcher = PixelFetcher(controlRegister, memory, backgroundFifo, LY)
     }
 
     sealed class Layer {}
@@ -124,107 +255,3 @@ data class Pixel(val colorId: ColorID, val palette: Int, val backgroundPriority:
 }
 
 class Palette(colors: Array<Int>)
-
-
-
-
-class LcdControlRegister() {
-    private var register: UByte = 0u
-
-    fun setDisplay(enabled: Boolean) {
-        register = if(enabled) {
-            register or (1u shl 7).toUByte()
-        }  else {
-            register and (1u shl 7).toUByte().inv()
-        }
-    }
-
-    fun getDisplay(): Boolean {
-        return register.toUInt() shr 7 > 0u
-    }
-
-    fun setWindowTileMap(first: Boolean) {
-        register = if(first) {
-            register or (1u shl 6).toUByte()
-        }  else {
-            register and (1u shl 6).toUByte().inv()
-        }
-    }
-
-    fun getWindowTileMap(): Boolean {
-        return register.toUInt() shr 6 > 0u
-    }
-
-    fun setWindowEnabled(enabled: Boolean) {
-        register = if(enabled) {
-            register or (1u shl 5).toUByte()
-        }  else {
-            register and (1u shl 5).toUByte().inv()
-        }
-    }
-
-    fun getWindowEnabled(): Boolean {
-        return register.toUInt() shr 5 > 0u
-    }
-
-    fun setBgAndWindowTileDataAddressingMode(`8000Mode`: Boolean) {
-        register = if(`8000Mode`) {
-            register or (1u shl 4).toUByte()
-        }  else {
-            register and (1u shl 4).toUByte().inv()
-        }
-    }
-
-    fun getBgAndWindowTileDataAddressingMode(): Boolean {
-        return register.toUInt() shr 4 > 0u
-    }
-
-    fun setBgTileMap(first: Boolean) {
-        register = if(first) {
-            register or (1u shl 3).toUByte()
-        }  else {
-            register and (1u shl 3).toUByte().inv()
-        }
-    }
-
-    fun getBgTileMap(): Boolean {
-        return register.toUInt() shr 3 > 0u
-    }
-
-    fun setSpriteSizeEnabled(enabled: Boolean) {
-        register = if(enabled) {
-            register or (1u shl 2).toUByte()
-        }  else {
-            register and (1u shl 2).toUByte().inv()
-        }
-    }
-
-    fun getSpriteSizeEnabled(): Boolean {
-        return register.toUInt() shr 2 > 0u
-    }
-
-    fun setSpriteEnabled(enabled: Boolean) {
-        register = if(enabled) {
-            register or (1u shl 1).toUByte()
-        }  else {
-            register and (1u shl 1).toUByte().inv()
-        }
-    }
-
-    fun getSpriteEnabled(): Boolean {
-        return register.toUInt() shr 1 > 0u
-    }
-
-    fun setBgAndWindowEnabled(enabled: Boolean) {
-        register = if(enabled) {
-            register or (1u shl 0).toUByte()
-        }  else {
-            register and (1u shl 0).toUByte().inv()
-        }
-    }
-
-    fun getBgAndWindowEnabled(): Boolean {
-        return register.toUInt() shr 0 > 0u
-    }
-
-}
