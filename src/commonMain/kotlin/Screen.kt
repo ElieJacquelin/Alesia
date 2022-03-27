@@ -2,7 +2,7 @@ import rendering.LcdControlRegister
 import rendering.PixelFetcher
 
 @OptIn(ExperimentalUnsignedTypes::class)
-class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdControlRegister(), backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), pixelFetcher: PixelFetcher = PixelFetcher(controlRegister, memory)) {
+class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdControlRegister(memory), backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), pixelFetcher: PixelFetcher = PixelFetcher(controlRegister, memory)) {
     var tiles = generateTiles()
     var OAM = generateOAM()
     internal var state: State = State.OAMScan(SharedState(0, 0,  List(160) { ArrayList() }, backgroundFifo, pixelFetcher))
@@ -145,13 +145,14 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         if (state.sharedState.currentLineDotCount == 456) {
             // Reached the end of current line, go for the next line or new frame
             if (state.sharedState.currentLine == 153) {
-                this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0))
-
                 var completeFrame: Array<Array<Pixel>> = Array(144) { emptyArray() }
                 for (row in 0..143) {
                     completeFrame[row] = state.sharedState.frame[row].toTypedArray()
                 }
                 frameUpdateListener?.onFrameUpdate(completeFrame)
+
+                // Start a new frame
+                this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
             } else {
                 this.state = State.VerticalBlank(state.sharedState.copy(currentLine = state.sharedState.currentLine + 1, currentLineDotCount = 0))
             }

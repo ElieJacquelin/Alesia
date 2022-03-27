@@ -19,8 +19,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import okio.FileSystem
 import okio.Path.Companion.toPath
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Image
 
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
@@ -50,7 +48,7 @@ fun main() = application {
                 Button(modifier = Modifier.align(Alignment.CenterHorizontally),
                     onClick = {
                         emulatorScope.launch(newSingleThreadContext("emulator")) {
-                            alesia.runRom(FileSystem.SYSTEM, "C:\\Users\\eliej\\Downloads\\gb\\tetris.gb".toPath())
+                            alesia.runRom(FileSystem.SYSTEM, "C:\\Users\\eliej\\Downloads\\gb\\instr_timing.gb".toPath())
                         }
                     }) {
                     Text("Start")

@@ -109,7 +109,7 @@ internal class ScreenTest {
         currentLine: Int = 0,
         frame: List<ArrayList<Pixel>> = List(160) { ArrayList() },
         backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(),
-        pixelFetcher: PixelFetcher = PixelFetcher(LcdControlRegister(), memory)
+        pixelFetcher: PixelFetcher = PixelFetcher(LcdControlRegister(memory), memory)
     ): Screen.SharedState {
         return Screen.SharedState(currentLineDotCount, currentLine, frame, backgroundFifo, pixelFetcher)
     }
@@ -423,14 +423,15 @@ internal class ScreenTest {
     @Test
     fun `VBlank goes to new frame once line dot count is 456 and last line is drawn`() {
         // Given the current state is VBlank with 456 line dot count and the current line is 153
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 153)
+        // And the frame buffer is not empty
+        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 153, frame = List(160) { arrayListOf(Pixel(ColorID.ZERO, 0 , false)) })
         screen.state = Screen.State.VerticalBlank(originalSharedState)
 
         // When a new dot is being processed
         screen.tick()
 
-        // Then the next state is OAM Scan for the first line
-        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 0)
+        // Then the next state is OAM Scan for the first line and empty frame buffer
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 0, frame = List(160) {ArrayList()})
         assertEquals(Screen.State.OAMScan(expectedSharedState), screen.state)
     }
 

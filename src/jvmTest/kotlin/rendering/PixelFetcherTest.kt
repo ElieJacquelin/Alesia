@@ -17,8 +17,8 @@ class PixelFetcherTest {
 
     @BeforeTest
     fun init() {
-        lcdControlRegister = LcdControlRegister()
         memory = Memory()
+        lcdControlRegister = LcdControlRegister(memory)
         pixelFetcher = PixelFetcher(lcdControlRegister, memory)
     }
 
@@ -70,6 +70,40 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Line 1 - Tile on same row`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the second line
+        val sharedState = buildSharedState(currentLine = 1)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setBgTileMap(false)
+        // AND the tile ID to be fetched is set to 2
+        memory.set(0x9800u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID which is the same tile as the first line
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Line 8 - Tile on next row`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 8th line
+        val sharedState = buildSharedState(currentLine = 8)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setBgTileMap(false)
+        // AND the tile ID to be fetched is set to 2 (0x9800 + 0x20 * (currentLine / 8))
+        memory.set(0x9820u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
         assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
     }
 

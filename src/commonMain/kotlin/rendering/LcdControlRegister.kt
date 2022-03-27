@@ -1,7 +1,12 @@
 package rendering
 
-class LcdControlRegister() {
-    private var register: UByte = 0u
+import Memory
+
+class LcdControlRegister(val memory: Memory) {
+
+    private var register: UByte
+    get() = memory.get(0xFF40u)
+    set(value) = memory.set(0xFF40u, value)
 
     fun setDisplay(enabled: Boolean) {
         register = if(enabled) {
@@ -12,7 +17,7 @@ class LcdControlRegister() {
     }
 
     fun getDisplay(): Boolean {
-        return register.toUInt() shr 7 > 0u
+        return (register.toUInt() shr 7) and 1u > 0u
     }
 
     fun setWindowTileMap(first: Boolean) {
@@ -24,7 +29,7 @@ class LcdControlRegister() {
     }
 
     fun getWindowTileMap(): Boolean {
-        return register.toUInt() shr 6 > 0u
+        return (register.toUInt() shr 6) and 1u > 0u
     }
 
     fun setWindowEnabled(enabled: Boolean) {
@@ -36,7 +41,7 @@ class LcdControlRegister() {
     }
 
     fun getWindowEnabled(): Boolean {
-        return register.toUInt() shr 5 > 0u
+        return (register.toUInt() shr 5) and 1u > 0u
     }
 
     fun setBgAndWindowTileDataAddressingMode(`8000Mode`: Boolean) {
@@ -48,7 +53,7 @@ class LcdControlRegister() {
     }
 
     fun getBgAndWindowTileDataAddressingMode(): Boolean {
-        return register.toUInt() shr 4 > 0u
+        return (register.toUInt() shr 4) and 1u > 0u
     }
 
     fun setBgTileMap(first: Boolean) {
@@ -60,7 +65,7 @@ class LcdControlRegister() {
     }
 
     fun getBgTileMap(): Boolean {
-        return register.toUInt() shr 3 > 0u
+        return (register.toUInt() shr 3) and 1u > 0u
     }
 
     fun setSpriteSizeEnabled(enabled: Boolean) {
@@ -72,7 +77,7 @@ class LcdControlRegister() {
     }
 
     fun getSpriteSizeEnabled(): Boolean {
-        return register.toUInt() shr 2 > 0u
+        return (register.toUInt() shr 2) and 1u > 0u
     }
 
     fun setSpriteEnabled(enabled: Boolean) {
@@ -84,7 +89,7 @@ class LcdControlRegister() {
     }
 
     fun getSpriteEnabled(): Boolean {
-        return register.toUInt() shr 1 > 0u
+        return (register.toUInt() shr 1) and 1u > 0u
     }
 
     fun setBgAndWindowEnabled(enabled: Boolean) {
@@ -96,7 +101,7 @@ class LcdControlRegister() {
     }
 
     fun getBgAndWindowEnabled(): Boolean {
-        return register.toUInt() shr 0 > 0u
+        return (register.toUInt() shr 0) and 1u > 0u
     }
 
 }

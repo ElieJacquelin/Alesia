@@ -36,7 +36,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
         if (state.dotCount >= 1) {
             // TODO handle scrolling
             val mapTile = if (controlRegister.getBgTileMap()) 0x9C00u else 0x9800u
-            val tileID =  memory.get((mapTile + currentTileMapOffset).toUShort())
+            val tileID =  memory.get((mapTile + currentTileMapOffset + (0x20u * (state.sharedState.currentLine / 8).toUInt())).toUShort())
 
             this.state = State.GetTileDataLow(state.sharedState, tileID)
             return
