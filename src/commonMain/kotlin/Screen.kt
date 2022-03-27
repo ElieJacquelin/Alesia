@@ -16,6 +16,11 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
     internal data class SharedState(val currentLineDotCount: Int, val currentLine: Int, val frame: List<ArrayList<Pixel>>, val backgroundFifo: ArrayDeque<Pixel>, val pixelFetcher: PixelFetcher)
 
+    var frameUpdateListener: FrameUpdateListener? = null
+    interface FrameUpdateListener {
+        fun onFrameUpdate(frame: Array<Array<Pixel>>)
+    }
+
     // Each tick represents 1 dot
     fun tick() {
         when (state) {
@@ -141,6 +146,12 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             // Reached the end of current line, go for the next line or new frame
             if (state.sharedState.currentLine == 153) {
                 this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0))
+
+                var completeFrame: Array<Array<Pixel>> = Array(144) { emptyArray() }
+                for (row in 0..143) {
+                    completeFrame[row] = state.sharedState.frame[row].toTypedArray()
+                }
+                frameUpdateListener?.onFrameUpdate(completeFrame)
             } else {
                 this.state = State.VerticalBlank(state.sharedState.copy(currentLine = state.sharedState.currentLine + 1, currentLineDotCount = 0))
             }
