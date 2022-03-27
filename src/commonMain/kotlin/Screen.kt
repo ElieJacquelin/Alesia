@@ -114,7 +114,10 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         }
         if (state.sharedState.currentLineDotCount == 456) {
             // Reached the end of HBlank, go for the next line or VBlank
-            val newSharedState = state.sharedState.copy(currentLineDotCount = 0, currentLine = state.sharedState.currentLine + 1)
+            val newLineNumber = state.sharedState.currentLine + 1
+            val newSharedState = state.sharedState.copy(currentLineDotCount = 0, currentLine = newLineNumber)
+            // Increment LY counter
+            memory.set(0xFF44u, newLineNumber.toUByte())
             if (state.sharedState.currentLine == 143) {
                 this.state = State.VerticalBlank(newSharedState)
             } else {
@@ -153,8 +156,13 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
                 // Start a new frame
                 this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
+                // Reset LY counter
+                memory.set(0xFF44u, 0u)
             } else {
-                this.state = State.VerticalBlank(state.sharedState.copy(currentLine = state.sharedState.currentLine + 1, currentLineDotCount = 0))
+                val newLineNumber = state.sharedState.currentLine + 1
+                this.state = State.VerticalBlank(state.sharedState.copy(currentLine = newLineNumber, currentLineDotCount = 0))
+                // Increment LY counter
+                memory.set(0xFF44u, newLineNumber.toUByte())
             }
             return
         }

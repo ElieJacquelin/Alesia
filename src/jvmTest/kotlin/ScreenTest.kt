@@ -418,6 +418,8 @@ internal class ScreenTest {
         // Then the next state is VBlank for the next line
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 153)
         assertEquals(Screen.State.VerticalBlank(expectedSharedState), screen.state)
+        // And LY is updated
+        assertEquals(153.toUByte(), memory.get(0xFF44u))
     }
 
     @Test
@@ -431,8 +433,10 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the next state is OAM Scan for the first line and empty frame buffer
-        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 0, frame = List(160) {ArrayList()})
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 0, frame = List(160) { ArrayList() })
         assertEquals(Screen.State.OAMScan(expectedSharedState), screen.state)
+        // And LY is updated
+        assertEquals(0.toUByte(), memory.get(0xFF44u))
     }
 
     @Test
@@ -501,6 +505,8 @@ internal class ScreenTest {
         // Then the next state is OAMScan for the next line
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 143)
         assertEquals(Screen.State.OAMScan(expectedSharedState), screen.state)
+        // And LY is updated
+        assertEquals(143.toUByte(), memory.get(0xFF44u))
     }
 
     @Test
@@ -515,5 +521,7 @@ internal class ScreenTest {
         // Then the next state is VBlank for the next line
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 144)
         assertEquals(Screen.State.VerticalBlank(expectedSharedState), screen.state)
+        // And LY is updated
+        assertEquals(144.toUByte(), memory.get(0xFF44u))
     }
 }
