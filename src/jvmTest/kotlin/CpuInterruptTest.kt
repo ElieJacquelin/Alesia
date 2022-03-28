@@ -1,6 +1,7 @@
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
@@ -50,7 +51,8 @@ class CpuInterruptTest {
         // And the previous counter is stored onto the stack
         assertEquals(0x01u, memory.get(cpu.stackPointer))
         assertEquals(0x01u, memory.get((cpu.stackPointer + 1u).toUShort()))
-
+        // And the VBlank interrupt request is disabled
+        memory.set(0xFF0Fu, 0b0000_0000u)
     }
 
     @Test
@@ -77,5 +79,22 @@ class CpuInterruptTest {
         assertEquals(0x02u, memory.get(cpu.stackPointer))
         assertEquals(0x01u, memory.get((cpu.stackPointer + 1u).toUShort()))
 
+    }
+
+    @Test
+    fun `Disable Halt if IF an IE are set`() {
+        // Given interrupt master is disabled
+        cpu.interruptMasterEnabled = false
+        // And VBLANK interrupt is enabled and requested
+        memory.set(0xFFFFu, 0b0000_0001u)
+        memory.set(0xFF0Fu, 0b0000_0001u)
+        // And CPU is halted
+        cpu.halt = true
+
+        // When the cpu ticks
+        cpu.tick()
+
+        // Then the halt is disabled
+        assertFalse(cpu.halt)
     }
 }

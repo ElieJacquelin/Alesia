@@ -36,6 +36,7 @@ class CPU(private val memory: Memory) {
         // wait for interruption if CPU has been halted
         while (halt) {
             handleInterrupts()
+            updateTimers(4)
         }
         actionAfterInstruction?.invoke()
         return cycleCount
@@ -105,13 +106,15 @@ class CPU(private val memory: Memory) {
     }
 
     private fun shouldInterrupt(bit: Int): Boolean {
-        return interruptMasterEnabled && memory.get(0xFFFFu) and (1u shl bit).toUByte() > 0u.toUByte() && memory.get(0xFF0Fu) and (1u shl bit).toUByte() > 0u.toUByte()
+        val registersAreSet = memory.get(0xFFFFu) and (1u shl bit).toUByte() > 0u.toUByte() && memory.get(0xFF0Fu) and (1u shl bit).toUByte() > 0u.toUByte()
+        if (registersAreSet) halt = false // Disable any pending halt
+        return interruptMasterEnabled && registersAreSet
     }
 
     private fun triggerInterrupt(jumpAddress: UShort, bit: Int) {
         // Disable other interrupts
         interruptMasterEnabled = false
-        memory.set(0xFF0Fu, memory.get(0xFF0Fu) or (1u shl bit).toUByte())
+        memory.set(0xFF0Fu, memory.get(0xFF0Fu) and (1u shl bit).toUByte().inv())
 
         // Store current instruction in the stackpointer
         storeShortToStack(programCounter)
