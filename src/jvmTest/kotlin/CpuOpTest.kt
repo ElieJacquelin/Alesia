@@ -1528,7 +1528,8 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b0000_0000u, cpu.AF.left)
-        assertEquals(0b1000_0000u, cpu.AF.right)
+        // The zero flag is always reset
+        assertEquals(0b0000_0000u, cpu.AF.right)
     }
 
     @Test
@@ -1567,7 +1568,8 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b0000_0000u, cpu.AF.left)
-        assertEquals(0b1001_0000u, cpu.AF.right)
+        // The zero flag is always reset
+        assertEquals(0b0001_0000u, cpu.AF.right)
     }
 
     @Test
@@ -1608,7 +1610,8 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b0000_0000u, cpu.AF.left)
-        assertEquals(0b1000_0000u, cpu.AF.right)
+        // The zero flag is always reset
+        assertEquals(0b0000_0000u, cpu.AF.right)
     }
 
     @Test
@@ -1662,7 +1665,8 @@ class CpuOpTest {
         assertEquals(0x101u, cpu.programCounter)
         assertEquals(4, cycleCount)
         assertEquals(0b0000_0000u, cpu.AF.left)
-        assertEquals(0b1001_0000u, cpu.AF.right)
+        // The zero flag is always reset
+        assertEquals(0b0001_0000u, cpu.AF.right)
     }
 
     @Test

@@ -1273,13 +1273,25 @@ class CPU(private val memory: Memory) {
 
             // Rotates and shifts
             // RLCA
-            0x07u -> op({ RLC(AF, true) }, 4)
+            0x07u -> op({
+                RLC(AF, true)
+                AF.setZeroFlag(false)
+            }, 4)
             // RLA
-            0x17u -> op({ RL(AF, true) }, 4)
+            0x17u -> op({
+                RL(AF, true)
+                AF.setZeroFlag(false)
+            }, 4)
             // RRCA
-            0x0Fu -> op({ RRC(AF, true) }, 4)
+            0x0Fu -> op({
+                RRC(AF, true)
+                AF.setZeroFlag(false)
+            }, 4)
             // RRA
-            0x1Fu -> op({ RR(AF, true) }, 4)
+            0x1Fu -> op({
+                RR(AF, true)
+                AF.setZeroFlag(false)
+            }, 4)
 
             // JP nn
             0xC3u -> op({ jump() }, 12)
