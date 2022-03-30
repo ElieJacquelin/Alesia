@@ -11,7 +11,7 @@ class CpuOpTest {
 
     @BeforeTest
     fun setup() {
-        memory = Memory()
+        memory = Memory(disableWritingToRom = true)
         cpu = CPU(memory)
         cpu.stackPointer = 0x100u
     }

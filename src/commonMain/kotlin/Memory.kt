@@ -1,7 +1,7 @@
 import io.Joypad
 
 @ExperimentalUnsignedTypes
-class Memory(val joypad: Joypad = Joypad()) {
+class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean=  false) {
     private val memory = UByteArray(0x10000)
     // Memory map (from Pan Docs)
     // Start  End	Description	                    Notes
@@ -50,6 +50,12 @@ class Memory(val joypad: Joypad = Joypad()) {
     }
 
     fun set(address: UShort, value:UByte) {
+        // Prevent writing values onto the ROM itself
+        // A significant amount of unit tests writes onto the ROM, we allow an option for those tests to bypass this restriction
+        if (address < 0x8000u && !disableWritingToRom) {
+            return
+        }
+
         memory[address.toInt()] = value
 
         if(address == 0xFF46u.toUShort()) {

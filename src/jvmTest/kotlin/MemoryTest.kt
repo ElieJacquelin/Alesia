@@ -39,4 +39,38 @@ internal class MemoryTest {
         // Then DIV is reset
         assertEquals(0x00u, memory.get(0xFF04u))
     }
+
+    @Test
+    fun `Load ROM`() {
+        // Given a ROM is ready to be loaded
+        val rom = UByteArray(2) { 0x12u }
+
+        // When loading the ROM
+        memory.loadRom(rom)
+
+        // Then the rom is loaded starting from address 0
+        assertEquals(0x12u, memory.get(0x0000u))
+        assertEquals(0x12u, memory.get(0x0001u))
+    }
+
+    @Test
+    fun `Writing onto ROM is disabled`() {
+        // When trying to write a value onto a ROM address
+        memory.set(0x1234u, 0x12u)
+
+        // Then the value is ignored
+        assertEquals(0u, memory.get(0x1234u))
+    }
+
+    @Test
+    fun `Allow bypassing ROM write restriction`() {
+        // Given the bypass is set
+        val memory = Memory(disableWritingToRom = true)
+
+        // When trying to write a value onto a ROM address
+        memory.set(0x1234u, 0x12u)
+
+        // Then the value is set
+        assertEquals(0x12u, memory.get(0x1234u))
+    }
 }
