@@ -1,5 +1,7 @@
+import io.Joypad
+
 @ExperimentalUnsignedTypes
-class Memory {
+class Memory(val joypad: Joypad = Joypad()) {
     private val memory = UByteArray(0x10000)
     // Memory map (from Pan Docs)
     // Start  End	Description	                    Notes
@@ -40,6 +42,10 @@ class Memory {
     }
 
     fun get(address: UShort): UByte {
+        if(address == 0xFF00u.toUShort()) {
+            val joypadControl = memory[0xFF00u.toInt()] and 0b0011_0000u
+            return joypad.generateJoypadValue(joypadControl)
+        }
         return memory[address.toInt()]
     }
 
@@ -66,5 +72,9 @@ class Memory {
     fun loadRom(rom: UByteArray) {
         // The rom takes the first 32kb of memory
         rom.copyInto(memory)
+    }
+
+    fun handleKey(key: Joypad.Key, pressed: Boolean) {
+        joypad.handleKey(key, pressed)
     }
 }

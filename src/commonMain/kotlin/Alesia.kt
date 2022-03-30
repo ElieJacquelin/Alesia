@@ -1,7 +1,8 @@
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.ImageBitmap
+import io.Joypad
+import kotlinx.coroutines.delay
 import okio.FileSystem
 import okio.Path
 import okio.buffer
@@ -16,11 +17,13 @@ class Alesia: Screen.FrameUpdateListener {
     val cpu = CPU(memory)
     val screen = Screen(memory).apply { frameUpdateListener = this@Alesia }
 
+    var shouldSleep = false
+
     init {
 
     }
 
-    fun runRom(fileSystem: FileSystem, path: Path) {
+    suspend fun runRom(fileSystem: FileSystem, path: Path) {
         val rom = loadRom(fileSystem, path)
         memory.loadRom(rom)
 
@@ -32,6 +35,10 @@ class Alesia: Screen.FrameUpdateListener {
                 val code = memory.get(0xff01u).toInt().toChar()
                 print("$code")
                 memory.set(0xff02u, 0u)
+            }
+            if (shouldSleep) {
+                delay(32)
+                shouldSleep = false
             }
         }
 
@@ -45,6 +52,11 @@ class Alesia: Screen.FrameUpdateListener {
 
         buffer.close()
         return rom.toUByteArray()
+    }
+
+
+    fun handleKeyEvent(key: Joypad.Key, pressed: Boolean) {
+        memory.handleKey(key, pressed)
     }
 
     override fun onFrameUpdate(frame: Array<Array<Pixel>>) {
@@ -66,5 +78,6 @@ class Alesia: Screen.FrameUpdateListener {
         }
 
         this.frameBitmap = frameRgb
+        shouldSleep = true
     }
 }
