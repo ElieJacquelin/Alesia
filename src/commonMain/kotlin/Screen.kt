@@ -2,19 +2,21 @@ import rendering.LcdControlRegister
 import rendering.PixelFetcher
 
 @OptIn(ExperimentalUnsignedTypes::class)
-class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdControlRegister(memory), backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), pixelFetcher: PixelFetcher = PixelFetcher(controlRegister, memory)) {
+class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdControlRegister(memory), backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), objectFifo: ArrayDeque<Pixel> = ArrayDeque(), pixelFetcher: PixelFetcher = PixelFetcher(controlRegister, memory)) {
     var tiles = generateTiles()
     var OAM = generateOAM()
-    internal var state: State = State.OAMScan(SharedState(0, 0,  List(160) { ArrayList() }, backgroundFifo, pixelFetcher))
+    internal var state: State = State.OAMScan(SharedState(0, 0,  List(160) { ArrayList() }, backgroundFifo, objectFifo, pixelFetcher))
 
     internal sealed class State {
         data class HorizontalBlank(val sharedState: SharedState, val dotCountInStep: Int = 0): State()
         data class VerticalBlank(val sharedState: SharedState): State()
-        data class OAMScan(val sharedState: SharedState): State()
-        data class DrawPixels(val sharedState: SharedState): State()
+        data class OAMScan(val sharedState: SharedState,  val spritesOnTheCurrentLine: List<Object> = emptyList()): State()
+        data class DrawPixels(val sharedState: SharedState, val currentXScanLine: Int = 0, val spriteFetchingState: SpriteFetchingState = SpriteFetchingState(), val spritesOnTheCurrentLine: List<Object>): State()
     }
 
-    internal data class SharedState(val currentLineDotCount: Int, val currentLine: Int, val frame: List<ArrayList<Pixel>>, val backgroundFifo: ArrayDeque<Pixel>, val pixelFetcher: PixelFetcher)
+    internal data class SharedState(val currentLineDotCount: Int, val currentLine: Int, val frame: List<ArrayList<Pixel>>, val backgroundFifo: ArrayDeque<Pixel>, val objectFifo: ArrayDeque<Pixel>, val pixelFetcher: PixelFetcher)
+
+    internal data class SpriteFetchingState(val fetcherAdvancementDotCount: Int = 0, val currentSpriteIndex: UByte = 0u)
 
     var frameUpdateListener: FrameUpdateListener? = null
     interface FrameUpdateListener {
@@ -32,28 +34,41 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
     }
 
     private fun oamScan(state: State.OAMScan) {
-        val (currentLineDotCount) = state.sharedState
+        val (currentLineDotCount, currentLine) = state.sharedState
         if (currentLineDotCount == 0) {
             // Start of a new line, we can generate the OAM list
-            // It might make sense to generate the OAM progressively in case the memory is being updated
-            generateOAM()
+            val OAM = generateOAM()
+            // and find the first 10 sprites to be displayed for that line
+            val spriteSize = if(controlRegister.getSpriteSizeEnabled()) 16 else 8
+            val spritesOnTheScanLine = OAM.filter { sprite ->
+                // Current line has to be within the sprite: y pos <= current line <= y pos + (sprite size - 1)
+                // However sprites are shifted 16 lines up: Y=0 doesn't show on the screen
+                sprite.yPos - 16 <= currentLine && currentLine <= sprite.yPos - 16 + (spriteSize - 1)
+            }.sortedBy { sprite -> sprite.xPos //Sort by increasing X position
+            }.take(10) // Ignore sprites after 10 consecutive sprites
+
             setStatMode(state)
             triggerStatInterruptIfNeeded()
+
+            val newSharedState = state.sharedState.copy(currentLineDotCount = 1)
+            this.state = State.OAMScan(newSharedState, spritesOnTheCurrentLine = spritesOnTheScanLine)
+            return
         }
         val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
         // The OAM scan mode is meant to last 80 dots before moving to the next mode
         if (currentLineDotCount >= 79) {
-            this.state = State.DrawPixels(newSharedState)
+            this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
         } else {
-            this.state = State.OAMScan(newSharedState)
+            this.state = State.OAMScan(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
         }
     }
 
     private fun drawingPixel(state: State.DrawPixels) {
-        val (currentLineDotCount, currentLine, frame, backgroundFifo, pixelFetcher) = state.sharedState
+        val (currentLineDotCount, currentLine, frame, backgroundFifo, objectFifo, pixelFetcher) = state.sharedState
         if (currentLineDotCount == 80) {
             // Resets fifo and fetcher to prepare them for the current line
             backgroundFifo.clear()
+            objectFifo.clear()
             pixelFetcher.reset(currentLine, backgroundFifo)
 
             setStatMode(state)
@@ -75,7 +90,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             return
         }
         // Continue drawing pixels
-        this.state = State.DrawPixels(newSharedState)
+        this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
     }
 
     private fun setStatInterrupt() {
@@ -175,7 +190,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
     private fun generateOAM(): Array<Object> {
         val result = mutableListOf<Object>()
         for(objectAddress in 0xFE00u..0xFE9Fu step 4) {
-            result.add(Object(objectAddress.toUShort()))
+            result.add(Object.ObjectFromMemoryAddress(objectAddress.toUShort(), memory))
         }
         OAM = result.toTypedArray()
         return OAM
@@ -196,28 +211,26 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         return tiles
     }
 
-    sealed class Layer {}
+}
 
-    inner class Background(): Layer() {
-        fun drawBackground() {
-            if(!controlRegister.getBgTileMap()) {
-                // 0x9800 tile map is being used
-                if(!controlRegister.getBgAndWindowTileDataAddressingMode()) {
-                    // 0x8000 mode
-                    for(tileId in 0x9800u..0x9BFFu) {
+data class Object(val yPos: Int, val xPos: Int, val tileIndex:UByte, val attributesFlags:UByte, val baseAddress: UShort){
+    @OptIn(ExperimentalUnsignedTypes::class)
+    companion object {
+         fun ObjectFromMemoryAddress(baseAddress: UShort, memory: Memory): Object {
+             val yPos: Int = memory.get(baseAddress).toInt()
+             val xPos: Int = memory.get((baseAddress+1u).toUShort()).toInt()
+             val tileIndex:UByte = memory.get((baseAddress+2u).toUShort())
+             val attributesFlags:UByte = memory.get((baseAddress+3u).toUShort())
 
-                    }
-                }
-            }
-        }
-    }
-    class Window(): Layer()
-    inner class Object(baseAddress: UShort): Layer() {
-        val yPos:UByte = memory.get(baseAddress)
-        val XPos:UByte = memory.get((baseAddress+1u).toUShort())
-        val tileIndex:UByte = memory.get((baseAddress+2u).toUShort())
-        val attributesFlags:UByte = memory.get((baseAddress+3u).toUShort())
-    }
+             return Object(yPos, xPos, tileIndex, attributesFlags, baseAddress)
+         }
+         fun storeObjectInMemory(obj: Object, memory: Memory) {
+             memory.set(obj.baseAddress, obj.yPos.toUByte())
+             memory.set((obj.baseAddress+1u).toUShort(), obj.xPos.toUByte())
+             memory.set((obj.baseAddress+2u).toUShort(), obj.tileIndex)
+             memory.set((obj.baseAddress+3u).toUShort(), obj.attributesFlags)
+         }
+     }
 }
 // 8x8 pixel, 2 bytes per row, 16 bytes total
 class Tile(val pixelsData: Array<Array<UByte>>, private val id:Int) {

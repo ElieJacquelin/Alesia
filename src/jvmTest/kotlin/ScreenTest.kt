@@ -1,10 +1,7 @@
 import io.mockk.*
 import rendering.LcdControlRegister
 import rendering.PixelFetcher
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
@@ -14,11 +11,13 @@ internal class ScreenTest {
 
     lateinit var memory: Memory
     lateinit var screen: Screen
+    lateinit var lcdControlRegister: LcdControlRegister
 
     @BeforeTest
     fun setUp() {
         memory = Memory()
-        screen = Screen(memory)
+        lcdControlRegister = LcdControlRegister(memory)
+        screen = Screen(memory, lcdControlRegister)
     }
 
     private fun storeTile(baseAddress: UShort) {
@@ -109,9 +108,10 @@ internal class ScreenTest {
         currentLine: Int = 0,
         frame: List<ArrayList<Pixel>> = List(160) { ArrayList() },
         backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(),
+        objectFifo: ArrayDeque<Pixel> = ArrayDeque(),
         pixelFetcher: PixelFetcher = PixelFetcher(LcdControlRegister(memory), memory)
     ): Screen.SharedState {
-        return Screen.SharedState(currentLineDotCount, currentLine, frame, backgroundFifo, pixelFetcher)
+        return Screen.SharedState(currentLineDotCount, currentLine, frame, backgroundFifo, objectFifo, pixelFetcher)
     }
 
     @Test
@@ -130,10 +130,187 @@ internal class ScreenTest {
         // Then the OAM has 40 items
         assertEquals(40, screen.OAM.size)
         // And the first sprite has the relevant data
-        assertEquals(0xFAu, screen.OAM[0].yPos)
-        assertEquals(0xFBu, screen.OAM[0].XPos)
+        assertEquals((0xFAu).toInt(), screen.OAM[0].yPos)
+        assertEquals((0xFBu).toInt(), screen.OAM[0].xPos)
         assertEquals(0xFCu, screen.OAM[0].tileIndex)
         assertEquals(0xFDu, screen.OAM[0].attributesFlags)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Before scanline 16x16`() {
+        // Given the first sprite is at position 0
+        val sprite = Object(0,0,0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // And the sprite size is set to 16x16
+        lcdControlRegister.setSpriteSizeEnabled(true)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then the sprite isn't in the current sprite list as it is above the scanline
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = emptyList()), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Before scanline 16x8`() {
+        // Given the first sprite is at position 8
+        val sprite = Object(8,0,0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // And the sprite size is set to 16x8
+        lcdControlRegister.setSpriteSizeEnabled(false)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then the sprite isn't in the current sprite list as it is above the scanline
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = emptyList()), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - last line`() {
+        // Given the first sprite is at position 1
+        val sprite = Object(1, 0, 0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // And the sprite size is set to 16x16
+        lcdControlRegister.setSpriteSizeEnabled(true)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then the sprite is in the current sprite list as the last line of the sprite overlaps the current line
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Within scanline 16x8 - last line`() {
+        // Given the first sprite is at position 9
+        val sprite = Object(9, 0, 0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // And the sprite size is set to 16x8
+        lcdControlRegister.setSpriteSizeEnabled(false)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then the sprite is in the current sprite list as the last line of the sprite overlaps the current line
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - first line`() {
+        // Given the first sprite is at position 16
+        val sprite = Object(16, 0, 0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // And the sprite size is set to 16x16
+        lcdControlRegister.setSpriteSizeEnabled(true)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then the sprite is in the current sprite list as the first line of the sprite overlaps the current line
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Within scanline 16x8 - first line`() {
+        // Given the first sprite is at position 16
+        val sprite = Object(16, 0, 0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // And the sprite size is set to 16x8
+        lcdControlRegister.setSpriteSizeEnabled(false)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then the sprite is in the current sprite list as the first line of the sprite overlaps the current line
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+    }
+    @Test
+    fun `OAM Scan finds sprite in the current line - After scanline`() {
+        // Given the first sprite is at position 17
+        val sprite = Object(17, 0, 0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then the sprite is not in the sprite list as the sprite is below the current scan line
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = emptyList()), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - multiple sprite`() {
+        // Given the first sprite is at position 1
+        val sprite = Object(1, 0, 0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // Given the second sprite is at position 10
+        val sprite2 = Object(10, 0, 0xFAu, 0xFFu, 0xFE04u)
+        Object.storeObjectInMemory(sprite2, memory)
+        // And the sprite size is set to 16x16
+        lcdControlRegister.setSpriteSizeEnabled(true)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then both sprites are in the list
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory), Object.ObjectFromMemoryAddress(0xFE04u, memory))), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - 10 sprites limit`() {
+        // Given 11 sprites are in the same line and next to each other on the X line
+        val sprites = mutableListOf<Object>()
+        for (i in 0..10) {
+            val sprite = Object(1, i, 0xFFu, 0xFFu, (0xFE00u + (0x4u * i.toUInt())).toUShort())
+            Object.storeObjectInMemory(sprite, memory)
+            sprites.add(sprite)
+        }
+        val expectedRemovedSprite = sprites.removeLast()
+
+        // And the sprite size is set to 16x16
+        lcdControlRegister.setSpriteSizeEnabled(true)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then 10 sprites are in the list as the furthest one is being dismissed
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = sprites), screen.state)
     }
 
     @Test
@@ -188,7 +365,7 @@ internal class ScreenTest {
         // Then the new state is Rendering Pixel for the next dot
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 80)
 
-        assertEquals(Screen.State.DrawPixels(expectedSharedState), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList()), screen.state)
     }
 
     @Test
@@ -218,7 +395,7 @@ internal class ScreenTest {
         val currentLine = 12
         val originalSharedState = buildSharedState(currentLineDotCount = 80, currentLine = currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
 
         // When the machine ticks
         screen.tick()
@@ -251,7 +428,7 @@ internal class ScreenTest {
         // And the current dot count is not 80
         val originalSharedState = buildSharedState(currentLineDotCount = 90, frame = frame, currentLine=currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
 
         // When the machine ticks
         screen.tick()
@@ -267,7 +444,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 91)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList()), screen.state)
     }
 
     @Test
@@ -285,7 +462,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
 
         // When the machine ticks
         screen.tick()
@@ -295,7 +472,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 1)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList()), screen.state)
     }
 
     @Test
@@ -316,7 +493,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
 
         // When the machine ticks
         screen.tick()
@@ -331,7 +508,7 @@ internal class ScreenTest {
         // Given the current dot count is at 80 (first dot of DrawPixel)
         val originalSharedState = buildSharedState(currentLineDotCount = 80)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
 
         // When a new dot is being processed
         screen.tick()
