@@ -428,7 +428,7 @@ internal class ScreenTest {
         // And the current dot count is not 80
         val originalSharedState = buildSharedState(currentLineDotCount = 90, frame = frame, currentLine=currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 1)
 
         // When the machine ticks
         screen.tick()
@@ -442,13 +442,13 @@ internal class ScreenTest {
         assertEquals(Pixel(ColorID.THREE, 0, false), frame[currentLine][0]) // Existing pixel
         assertEquals(Pixel(ColorID.ONE, 0, false), frame[currentLine][1]) // New pixel
 
-        // And the state remains on DrawPixels
+        // And the state remains on DrawPixels for the next X
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 91)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList()), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 2), screen.state)
     }
 
     @Test
-    fun `DrawPixels always ticks the PixelFetcher`() {
+    fun `DrawPixels always ticks the PixelFetcher if no sprites to be drawn`() {
         val pixelFetcher: PixelFetcher = mockk()
         every { pixelFetcher.reset(any(), any()) } just Runs
         every { pixelFetcher.tick() } just Runs
@@ -459,10 +459,11 @@ internal class ScreenTest {
         for (i in 0..158) {
             frame[currentLine].add(Pixel(ColorID.THREE, 0, false))
         }
+        // And no sprites should be drawn
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 158)
 
         // When the machine ticks
         screen.tick()
@@ -472,7 +473,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 1)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList()), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 159), screen.state)
     }
 
     @Test
@@ -501,6 +502,292 @@ internal class ScreenTest {
         // Then the state moves to horizontal blank
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 1)
         assertEquals(Screen.State.HorizontalBlank(expectedSharedState), screen.state)
+    }
+
+    @Test
+    fun `DrawPixels waits for background fifo to not be empty while having sprites the be drawn on the current X`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given there is a sprite to be drawn at X 0, Y 20
+        val sprite = Object(36, 8, 0xFFu, 0xFFu, 0xFFFFu)
+        // And sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And the background fifo is empty
+        val backgroundFifo = ArrayDeque<Pixel>()
+
+        // And we are at line 20 at position 0
+        val currentLine = 20
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite))
+
+        // When the machine ticks 5 times
+        for (i in 0..4) {
+            screen.tick()
+        }
+
+        // Then the PixelFetcher also ticks 5 times
+        verify(exactly = 5) { pixelFetcher.tick() }
+
+        // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 5)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = listOf(sprite), currentXScanLine = 0), screen.state)
+    }
+
+    @Test
+    fun `DrawPixels tick fetcher 2 times for 4 dots while having sprites the be drawn on the current X`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given there is a sprite to be drawn at X 0, Y 20
+        val sprite = Object(36, 8, 0xFFu, 0xFFu, 0xFFFFu)
+        // And sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And the background fifo is not empty
+        val backgroundFifo = ArrayDeque<Pixel>()
+        backgroundFifo.add(Pixel(ColorID.ONE, 0, false))
+
+        // And we are at line 20 at position 0
+        val currentLine = 20
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite))
+
+        // When the machine ticks 4 times
+        for (i in 0..3) {
+            screen.tick()
+        }
+
+        // Then the PixelFetcher also ticks 2 times
+        verify(exactly = 2) { pixelFetcher.tick() }
+
+        // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 4)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = listOf(sprite), currentXScanLine = 0, spriteFetchingState = Screen.SpriteFetchingState(4)), screen.state)
+    }
+
+    @Test
+    fun `DrawPixels fills sprite Fifo while having sprites the be drawn on the current X`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given there is a sprite to be drawn at X 0, Y 20
+        val sprite = Object(36, 8, 0xFFu, 0xFFu, 0xFFFFu)
+        //With data for the first line: low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
+        memory.set(0x8FF0u, 0x06u)
+        memory.set(0x8FF1u, 0x03u)
+        // And sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And we are at line 20 at position 0
+        val currentLine = 20
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+        // And the sprite is ready to be read
+        val spriteFetchingState = Screen.SpriteFetchingState(fetcherAdvancementDotCount = 5)
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite), spriteFetchingState = spriteFetchingState)
+
+        // When the machine ticks
+        screen.tick()
+
+        // Then the sprite data is added to the object fifo in order
+        val expectedObjectFifo = ArrayDeque<Pixel>()
+
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
+
+        // And the sprite is removed from the list
+        val expectedSpriteList = emptyList<Object>()
+
+        // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
+        val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = expectedSpriteList, currentXScanLine = 0, spriteFetchingState = Screen.SpriteFetchingState()), screen.state)
+    }
+
+    @Test
+    fun `DrawPixels skips adding pixel sprite Fifo if sprites already in the queue`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given there is a sprite to be drawn at X 0, Y 20
+        val sprite = Object(36, 8, 0xFFu, 0xFFu, 0xFFFFu)
+        //With data for the first line: low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
+        memory.set(0x8FF0u, 0x06u)
+        memory.set(0x8FF1u, 0x03u)
+        // And sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And we are at line 20 at position 0
+        val currentLine = 20
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+        // And the object fifo is not empty for the first 7 pixels
+        val objectFifo = ArrayDeque<Pixel>()
+        for (i in 0..6) {
+            objectFifo.add(Pixel(ColorID.ONE, 0, false))
+        }
+
+        // And the sprite is ready to be read
+        val spriteFetchingState = Screen.SpriteFetchingState(fetcherAdvancementDotCount = 5)
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, objectFifo = objectFifo)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite), spriteFetchingState = spriteFetchingState)
+
+        // When the machine ticks
+        screen.tick()
+
+        // Then the sprite data not added as the sprite fifo is not empty except the last pixel
+        val expectedObjectFifo = ArrayDeque<Pixel>()
+
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
+
+        // And the sprite is removed from the list
+        val expectedSpriteList = emptyList<Object>()
+
+        // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
+        val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = expectedSpriteList, currentXScanLine = 0, spriteFetchingState = Screen.SpriteFetchingState()), screen.state)
+    }
+
+    @Test
+    fun `DrawPixels prioritize sprite lower in the OAM`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given there is 2 sprite to be drawn at X 0, Y 20 with sprite 1 being lower in the base address
+        val sprite1 = Object(36, 8, 0xFFu, 0xFFu, 0xFFFEu)
+        val sprite2 = Object(36, 8, 0xFEu, 0xFFu, 0xFFFFu)
+        //With data for the first line of sprite 1: low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
+        memory.set(0x8FF0u, 0x06u)
+        memory.set(0x8FF1u, 0x03u)
+
+        //With data for the first line of sprite 2: low: 1111 1111 / high: 1111 1111 gives 3333 3333 Pixel colors
+        memory.set(0x8FE0u, 0xFFu)
+        memory.set(0x8FE1u, 0xFFu)
+        // And sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And we are at line 20 at position 0
+        val currentLine = 20
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+        // And the sprite is ready to be read
+        val spriteFetchingState = Screen.SpriteFetchingState(fetcherAdvancementDotCount = 5)
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite1, sprite2), spriteFetchingState = spriteFetchingState)
+
+        // When the machine ticks
+        screen.tick()
+
+        // Then the sprite data is for sprite 1 which is lower in the OAM address
+        // Except for transparent pixel which are replaced by sprite 2
+        val expectedObjectFifo = ArrayDeque<Pixel>()
+
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
+
+        // And the sprite is removed from the list
+        val expectedSpriteList = emptyList<Object>()
+
+        // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
+        val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = expectedSpriteList, currentXScanLine = 0, spriteFetchingState = Screen.SpriteFetchingState()), screen.state)
+    }
+
+    @Test
+    fun `DrawPixels mixes background and object fifo`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And we are at line 0 at position 0
+        val currentLine = 0
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+        // And there is 8 non-transparent pixels in the background fifo
+        val backgroundFifo = ArrayDeque<Pixel>()
+        for (i in 0..7) {
+            backgroundFifo.add(Pixel(ColorID.ONE, 0, false))
+        }
+
+        // And there is 7 non-transparent pixels and 1 transparent pixel in the sprite fifo
+        val objectFifo = ArrayDeque<Pixel>()
+        for (i in 0..7) {
+            objectFifo.add(Pixel(ColorID.TWO, 0, false))
+        }
+        objectFifo[4] = Pixel(ColorID.ZERO, 0, false)
+
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo, objectFifo = objectFifo)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+
+        // When the machine ticks 8 times
+        for (i in 0..7) {
+            screen.tick()
+        }
+
+        // Then the sprite pixels has priority except for the transparent pixel which should be replaced by the background
+        assertEquals(frame[0][0], Pixel(ColorID.TWO, 0 , false))
+        assertEquals(frame[0][1], Pixel(ColorID.TWO, 0 , false))
+        assertEquals(frame[0][2], Pixel(ColorID.TWO, 0 , false))
+        assertEquals(frame[0][3], Pixel(ColorID.TWO, 0 , false))
+        assertEquals(frame[0][4], Pixel(ColorID.ONE, 0 , false))
+        assertEquals(frame[0][5], Pixel(ColorID.TWO, 0 , false))
+        assertEquals(frame[0][6], Pixel(ColorID.TWO, 0 , false))
+        assertEquals(frame[0][7], Pixel(ColorID.TWO, 0 , false))
+
+
+        // And the state remains on DrawPixels for the next X
+        assertEquals( Screen.State.DrawPixels(originalSharedState.copy(currentLineDotCount = 8), spritesOnTheCurrentLine = emptyList(), currentXScanLine = 8), screen.state)
     }
 
     @Test

@@ -16,7 +16,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
     internal data class SharedState(val currentLineDotCount: Int, val currentLine: Int, val frame: List<ArrayList<Pixel>>, val backgroundFifo: ArrayDeque<Pixel>, val objectFifo: ArrayDeque<Pixel>, val pixelFetcher: PixelFetcher)
 
-    internal data class SpriteFetchingState(val fetcherAdvancementDotCount: Int = 0, val currentSpriteIndex: UByte = 0u)
+    internal data class SpriteFetchingState(val fetcherAdvancementDotCount: Int = 0)
 
     var frameUpdateListener: FrameUpdateListener? = null
     interface FrameUpdateListener {
@@ -39,11 +39,9 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             // Start of a new line, we can generate the OAM list
             val OAM = generateOAM()
             // and find the first 10 sprites to be displayed for that line
-            val spriteSize = if(controlRegister.getSpriteSizeEnabled()) 16 else 8
             val spritesOnTheScanLine = OAM.filter { sprite ->
-                // Current line has to be within the sprite: y pos <= current line <= y pos + (sprite size - 1)
-                // However sprites are shifted 16 lines up: Y=0 doesn't show on the screen
-                sprite.yPos - 16 <= currentLine && currentLine <= sprite.yPos - 16 + (spriteSize - 1)
+                // Keep only sprites that are visible
+                sprite.getSpriteLineForCurrentScanLine(currentLine, controlRegister) != -1
             }.sortedBy { sprite -> sprite.xPos //Sort by increasing X position
             }.take(10) // Ignore sprites after 10 consecutive sprites
 
@@ -74,13 +72,78 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             setStatMode(state)
         }
 
+        val spriteList = state.spritesOnTheCurrentLine.toMutableList()
+        val spritesOnTheCurrentXCoordinate: List<Object> = spriteList.filter { sprite -> sprite.xPos - 8 == state.currentXScanLine }
+        if(controlRegister.getSpriteEnabled() && spritesOnTheCurrentXCoordinate.isNotEmpty()) {
+            // Wait for the pixel fetcher to start having enough pixels in the queue
+            val (spriteFetchingDotCount) = state.spriteFetchingState
+            if (pixelFetcher.state !is PixelFetcher.State.Push && backgroundFifo.isEmpty() && spriteFetchingDotCount == 0) {
+                pixelFetcher.tick()
+                val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
+                this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
+                return
+            }
+
+            // Advance fetcher twice for a total of 3 dots + 1 dots to find sprite address
+            if (spriteFetchingDotCount in 0..4) {
+                if(spriteFetchingDotCount == 0 || spriteFetchingDotCount == 1) {
+                    pixelFetcher.tick()
+                    // Sprite abortion may happen here
+                }
+                val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
+                val newSpriteFetchingState = SpriteFetchingState(fetcherAdvancementDotCount = spriteFetchingDotCount + 1)
+                this.state = State.DrawPixels(newSharedState, currentXScanLine = state.currentXScanLine, spriteFetchingState = newSpriteFetchingState, spritesOnTheCurrentLine = spriteList)
+                return
+            }
+            // Dot count 4 looks for the lower address of the sprite tile, we skip it and handle the whole sprite the next dot
+            if (spriteFetchingDotCount == 5) {
+                for(spriteToBeDrawn in spritesOnTheCurrentXCoordinate) {
+                    val spriteTileAddress = getSpriteTileAddress(spriteToBeDrawn)
+                    val spriteLineDataLow = getTileLineData(
+                        spriteTileAddress,
+                        spriteToBeDrawn.getSpriteLineForCurrentScanLine(currentLine, controlRegister).toUInt()
+                    )
+                    val spriteLineDataHigh = getTileLineData(
+                        (spriteTileAddress + 1u).toUShort(),
+                        spriteToBeDrawn.getSpriteLineForCurrentScanLine(currentLine, controlRegister).toUInt()
+                    )
+                    val spritePixels = getSpritePixels(spriteLineDataLow, spriteLineDataHigh)
+
+                    // Start filling object fifo with lowest priority pixel until reaching the needed size
+                    while (objectFifo.size < 8) {
+                        objectFifo.add(Pixel(ColorID.ZERO, 0, false))
+                    }
+
+                    // Start adding the sprites pixels to the queue
+                    spritePixels.forEachIndexed { i, pixel ->
+                        // Replace pixel in fifo with sprite pixel if the pixel in fifo is white or transparent
+                        if (objectFifo[i].colorId == ColorID.ZERO) {
+                            objectFifo[i] = pixel
+                        }
+                    }
+                    // The sprite has been handled, we can remove it from the list of sprites to be rendered
+                    spriteList.remove(spriteToBeDrawn)
+                }
+                // Done with adding sprite pixels for the current X, we can continue with the pixel rendering
+                this.state = State.DrawPixels(state.sharedState.copy(), spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
+                return
+            }
+        }
+
         // Advance the fetcher one tick
         pixelFetcher.tick()
-        // Start emptying the fifo, one pixel at a time
-        val pixel = backgroundFifo.removeFirstOrNull()
+        // Start emptying the fifo, one pixel at a time from both background and object fifo to keep them in sync
+        val pixelBackground = backgroundFifo.removeFirstOrNull()
         val currentLinePixels = frame[currentLine]
-        if (pixel != null) {
-            currentLinePixels.add(pixel)
+        if(pixelBackground != null) {
+            val pixelSprite = objectFifo.removeFirstOrNull()
+            val pixelToBeDrawn = if(controlRegister.getSpriteEnabled() && pixelSprite != null && pixelSprite.colorId != ColorID.ZERO) {
+                // TODO need to check background priority
+                pixelSprite
+            } else {
+                pixelBackground
+            }
+            currentLinePixels.add(pixelToBeDrawn)
         }
 
         val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
@@ -89,8 +152,47 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             this.state = State.HorizontalBlank(newSharedState)
             return
         }
-        // Continue drawing pixels
-        this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
+        // Continue drawing pixels and reset sprite fetching state if needed
+        this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = currentLinePixels.size)
+    }
+
+    // TODO the next three functions are duplicates from PixelFetcher
+    private fun getSpriteTileAddress(sprite: Object): UShort {
+        // Each tile takes 16 bytes of memory
+        return (0x8000u + (sprite.tileIndex * 16u)).toUShort()
+    }
+
+    private fun getTileLineData(tileAddress: UShort, lineSprite:UInt): UByte {
+        // A sprite takes 2 bytes per line, we can skip to the current line by jumping by a multiple of 2
+        return memory.get((tileAddress + 2u * lineSprite).toUShort())
+    }
+
+    private fun getSpritePixels(tileLowData: UByte, tileHighDate: UByte): Array<Pixel> {
+        val pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, false) }
+        for (x in 0..7) {
+            // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
+            val first = if (tileHighDate and (1u shl (7 - x)).toUByte() >= 1u) {
+                0x10u
+            } else {
+                0u
+            }
+
+            val second = if (tileLowData and (1u shl (7 - x)).toUByte() >= 1u) {
+                0x1u
+            } else {
+                0u
+            }
+
+            val colorID = when(first + second) {
+                0x00u -> ColorID.ZERO
+                0x01u -> ColorID.ONE
+                0x10u -> ColorID.TWO
+                0x11u -> ColorID.THREE
+                else -> throw Exception("Invalid color ID: ${first + second}")
+            }
+            pixelRow[x] = Pixel(colorID, 0, false)
+        }
+        return pixelRow
     }
 
     private fun setStatInterrupt() {
@@ -214,6 +316,19 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 }
 
 data class Object(val yPos: Int, val xPos: Int, val tileIndex:UByte, val attributesFlags:UByte, val baseAddress: UShort){
+
+    fun getSpriteLineForCurrentScanLine(ly: Int, controlRegister: LcdControlRegister): Int {
+        val spriteSize = if(controlRegister.getSpriteSizeEnabled()) 16 else 8
+        // Current line has to be within the sprite: y pos <= current line <= y pos + (sprite size - 1)
+        // However sprites are shifted 16 lines up: Y=0 doesn't show on the screen
+       if(yPos - 16 <= ly && ly <= yPos - 16 + (spriteSize - 1)) {
+           // Sprite is visible
+           return ly - yPos + 16
+       }
+        // Sprite is not visible for the current scan line
+        return -1
+    }
+
     @OptIn(ExperimentalUnsignedTypes::class)
     companion object {
          fun ObjectFromMemoryAddress(baseAddress: UShort, memory: Memory): Object {
