@@ -308,22 +308,22 @@ class CPU(private val memory: Memory) {
             0xF1u -> op({
                 AF.right = memory.get(stackPointer++)
                 AF.left = memory.get(stackPointer++)
-            }, 16)
+            }, 12)
             // POP BC
             0xC1u -> op({
                 BC.right = memory.get(stackPointer++)
                 BC.left = memory.get(stackPointer++)
-            }, 16)
+            }, 12)
             // POP DE
             0xD1u -> op({
                 DE.right = memory.get(stackPointer++)
                 DE.left = memory.get(stackPointer++)
-            }, 16)
+            }, 12)
             // POP HL
             0xE1u -> op({
                 HL.right = memory.get(stackPointer++)
                 HL.left = memory.get(stackPointer++)
-            }, 16)
+            }, 12)
 
             // 8 bit ALU
             // ADD A, A
@@ -1310,89 +1310,95 @@ class CPU(private val memory: Memory) {
             }, 12)
 
             // JR n
-            0x18u -> op({ jumpRelative() }, 8)
+            0x18u -> op({ jumpRelative() }, 12)
             // JR NZ n
-            0x20u -> op({ jumpRelative { !AF.getZeroFlag() } }, 8)
+            0x20u -> opVariableCycleCount({ jumpRelative { !AF.getZeroFlag() } })
             // JR Z n
-            0x28u -> op({ jumpRelative { AF.getZeroFlag() } }, 8)
+            0x28u -> opVariableCycleCount({ jumpRelative { AF.getZeroFlag() } })
             // JR NC n
-            0x30u -> op({ jumpRelative { !AF.getCarryFlag() } }, 8)
+            0x30u -> opVariableCycleCount({ jumpRelative { !AF.getCarryFlag() } })
             // JR C n
-            0x38u -> op({ jumpRelative { AF.getCarryFlag() } }, 8)
+            0x38u -> opVariableCycleCount({ jumpRelative { AF.getCarryFlag() } })
 
             // CALL nn
-            0xCDu -> op({ call() }, 12)
+            0xCDu -> op({ call() }, 24)
             // CALL NZ nn
-            0xC4u -> op({ call {!AF.getZeroFlag() } }, 12)
+            0xC4u -> opVariableCycleCount({ call {!AF.getZeroFlag() } })
             // CALL Z nn
-            0xCCu -> op({ call {AF.getZeroFlag() } }, 12)
+            0xCCu -> opVariableCycleCount({ call {AF.getZeroFlag() } })
             // CALL NC nn
-            0xD4u -> op({ call {!AF.getCarryFlag() } }, 12)
+            0xD4u -> opVariableCycleCount({ call {!AF.getCarryFlag() } })
             // CALL C nn
-            0xDCu -> op({ call {AF.getCarryFlag() } }, 12)
+            0xDCu -> opVariableCycleCount({ call {AF.getCarryFlag() } })
 
             // RST 00
-            0xC7u -> op({ restart(0u) }, 32)
+            0xC7u -> op({ restart(0u) }, 16)
             // RST 08
-            0xCFu -> op({ restart(0x08u) }, 32)
+            0xCFu -> op({ restart(0x08u) }, 16)
             // RST 10
-            0xD7u -> op({ restart(0x10u) }, 32)
+            0xD7u -> op({ restart(0x10u) }, 16)
             // RST 18
-            0xDFu -> op({ restart(0x08u) }, 32)
+            0xDFu -> op({ restart(0x08u) }, 16)
             // RST 20
-            0xE7u -> op({ restart(0x08u) }, 32)
+            0xE7u -> op({ restart(0x08u) }, 16)
             // RST 28
-            0xEFu -> op({ restart(0x28u) }, 32)
+            0xEFu -> op({ restart(0x28u) }, 16)
             // RST 30
-            0xF7u -> op({ restart(0x30u) }, 32)
+            0xF7u -> op({ restart(0x30u) }, 16)
             // RST 38
-            0xFFu -> op({ restart(0x38u) }, 32)
+            0xFFu -> op({ restart(0x38u) }, 16)
 
             // RET
-            0xC9u -> op({ `return`() }, 8)
+            0xC9u -> op({ `return`() }, 16)
             // RET NZ
-            0xC0u -> op({ `return` { !AF.getZeroFlag()} }, 8)
+            0xC0u -> opVariableCycleCount({ `return` { !AF.getZeroFlag()} })
             // RET Z
-            0xC8u -> op({ `return` { AF.getZeroFlag()} }, 8)
+            0xC8u -> opVariableCycleCount({ `return` { AF.getZeroFlag()} })
             // RET NC
-            0xD0u -> op({ `return` { !AF.getCarryFlag()} }, 8)
+            0xD0u -> opVariableCycleCount({ `return` { !AF.getCarryFlag()} })
             // RET C
-            0xD8u -> op({ `return` { AF.getCarryFlag()} }, 8)
+            0xD8u -> opVariableCycleCount({ `return` { AF.getCarryFlag()} })
             // RETI
             0xD9u -> op({
                 `return`()
                 interruptMasterEnabled = true
-            }, 8)
+            }, 16)
 
             else -> throw Exception("Unknown OP instruction: $instruction")
         }
         return Pair(cycleCount, actionAfterInstruction)
     }
 
-    private inline fun `return`(predicate: (() -> Boolean) = {true}) {
+    private inline fun `return`(predicate: (() -> Boolean) = {true}): Int {
         if (predicate.invoke()) {
             val jumpAddressLeastSignificant = memory.get(stackPointer++)
             val jumpAddressMostSignificant = memory.get(stackPointer++)
             programCounter =
                 (jumpAddressMostSignificant.toUInt() shl 8 or jumpAddressLeastSignificant.toUInt()).toUShort()
+            return 20
         }
+        return 8
     }
 
-    private inline fun call(predicate: (() -> Boolean) = {true}) {
+    private inline fun call(predicate: (() -> Boolean) = {true}): Int {
         val jumpAddress = readNN()
         if (predicate.invoke()) {
             storeShortToStack(programCounter)
             programCounter = jumpAddress
+            return 24
         }
+        return 12
     }
 
-    private inline fun jumpRelative(predicate: (() -> Boolean) = {true}) {
+    private inline fun jumpRelative(predicate: (() -> Boolean) = {true}): Int {
         // the next byte is read is considered signed and therefore can be a sum or a subtraction
         val offset = readOp().toByte() // The read should be done first is order to increment the program counter before the jump
         val jumpAddress = (programCounter.toShort() + offset).toUShort()
         if (predicate.invoke()) {
             programCounter = jumpAddress
+            return 12
         }
+        return 8
     }
 
     private inline fun jump(predicate: (() -> Boolean) = {true}) {
@@ -1734,6 +1740,9 @@ class CPU(private val memory: Memory) {
         private fun op(command: () -> Unit, cycleCount: Int): Int {
             command()
             return cycleCount
+        }
+        private fun opVariableCycleCount(command: () -> Int) : Int {
+            return command()
         }
 
         open class SplitRegister {

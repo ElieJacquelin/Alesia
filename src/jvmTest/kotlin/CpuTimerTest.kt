@@ -49,6 +49,22 @@ class CpuTimerTest {
     }
 
     @Test
+    fun `DIV register overflows back to 0`() {
+        // Given 252 cycles have passed (4 cycles remains)
+        cpu.divCycleCount = 252
+        // And the DIV register is at maximum count
+        cpu.divCycleCount = 0
+        memory.set(0xFF04u, 0xFFu)
+
+        // When 4 cycles have passed (LD A,A is 4 cycles)
+        memory.set(0x100u, 0x7Fu)
+        cpu.tick()
+
+        // Then the div register overflows and go back to 0
+        assertEquals(0u, memory.get(0xFF04u))
+    }
+
+    @Test
     fun `TimerControl can not disable DIV counting`() {
         // Given the timer control disable the timer
         memory.set(0xFF07u, 0b0000_0011u) // 3rd bit is the timer control

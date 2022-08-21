@@ -625,7 +625,7 @@ class CpuOpTest {
 
         val cycleCount = cpu.tick()
         assertEquals(0x101u, cpu.programCounter)
-        assertEquals(16, cycleCount)
+        assertEquals(12, cycleCount)
         assertEquals(0x34u, cpu.AF.left)
         assertEquals(0x10u, cpu.AF.right)
         assertEquals(0x3458u, cpu.stackPointer)
@@ -640,7 +640,7 @@ class CpuOpTest {
 
         val cycleCount = cpu.tick()
         assertEquals(0x101u, cpu.programCounter)
-        assertEquals(16, cycleCount)
+        assertEquals(12, cycleCount)
         assertEquals(0x34u, cpu.AF.left)
         assertEquals(0x10u, cpu.AF.right)
         assertEquals(0x3458u, cpu.stackPointer)
@@ -2039,7 +2039,7 @@ class CpuOpTest {
 
         val cycleCount = cpu.tick()
         assertEquals(0x112u, cpu.programCounter)
-        assertEquals(8, cycleCount)
+        assertEquals(12, cycleCount)
     }
 
     @Test
@@ -2049,6 +2049,28 @@ class CpuOpTest {
 
         val cycleCount = cpu.tick()
         assertEquals(0xF2u, cpu.programCounter)
+        assertEquals(12, cycleCount)
+    }
+
+    @Test
+    fun `JR n | Z`() {
+        memory.set(0x100u, 0x28u)
+        memory.set(0x101u, 0x10u)
+        cpu.AF.setZeroFlag(true)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x112u, cpu.programCounter)
+        assertEquals(12, cycleCount)
+    }
+
+    @Test
+    fun `JR n | Z not fulfilled`() {
+        memory.set(0x100u, 0x28u)
+        memory.set(0x101u, 0x10u)
+        cpu.AF.setZeroFlag(false)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x102u, cpu.programCounter)
         assertEquals(8, cycleCount)
     }
 
@@ -2064,6 +2086,36 @@ class CpuOpTest {
         assertEquals(0x3454u, cpu.stackPointer)
         assertEquals(0x03u, memory.get(cpu.stackPointer))
         assertEquals(0x01u, memory.get((cpu.stackPointer + 1u).toUShort()))
+        assertEquals(24, cycleCount)
+    }
+
+    @Test
+    fun `CALL nn | Z`() {
+        memory.set(0x100u, 0xCCu)
+        memory.set(0x101u, 0x11u)
+        memory.set(0x102u, 0x12u)
+        cpu.stackPointer = 0x3456u
+        cpu.AF.setZeroFlag(true)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x1211u, cpu.programCounter)
+        assertEquals(0x3454u, cpu.stackPointer)
+        assertEquals(0x03u, memory.get(cpu.stackPointer))
+        assertEquals(0x01u, memory.get((cpu.stackPointer + 1u).toUShort()))
+        assertEquals(24, cycleCount)
+    }
+
+    @Test
+    fun `CALL nn | Z not fulfilled`() {
+        memory.set(0x100u, 0xCCu)
+        memory.set(0x101u, 0x11u)
+        memory.set(0x102u, 0x12u)
+        cpu.stackPointer = 0x3456u
+        cpu.AF.setZeroFlag(false)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x103u, cpu.programCounter)
+        assertEquals(0x3456u, cpu.stackPointer)
         assertEquals(12, cycleCount)
     }
 
@@ -2077,7 +2129,7 @@ class CpuOpTest {
         assertEquals(0x3454u, cpu.stackPointer)
         assertEquals(0x01u, memory.get(cpu.stackPointer))
         assertEquals(0x01u, memory.get((cpu.stackPointer + 1u).toUShort()))
-        assertEquals(32, cycleCount)
+        assertEquals(16, cycleCount)
     }
 
     @Test
@@ -2090,7 +2142,7 @@ class CpuOpTest {
         assertEquals(0x3454u, cpu.stackPointer)
         assertEquals(0x01u, memory.get(cpu.stackPointer))
         assertEquals(0x01u, memory.get((cpu.stackPointer + 1u).toUShort()))
-        assertEquals(32, cycleCount)
+        assertEquals(16, cycleCount)
     }
 
     @Test
@@ -2103,6 +2155,34 @@ class CpuOpTest {
         val cycleCount = cpu.tick()
         assertEquals(0x1211u, cpu.programCounter)
         assertEquals(0x3458u, cpu.stackPointer)
+        assertEquals(16, cycleCount)
+    }
+
+    @Test
+    fun `Return - Condition`() {
+        memory.set(0x100u, 0xC8u)
+        cpu.stackPointer = 0x3456u
+        memory.set(0x3456u, 0x11u)
+        memory.set(0x3457u, 0x12u)
+
+        cpu.AF.setZeroFlag(true)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x1211u, cpu.programCounter)
+        assertEquals(0x3458u, cpu.stackPointer)
+        assertEquals(20, cycleCount)
+    }
+
+    @Test
+    fun `Return - Condition not fulfilled`() {
+        memory.set(0x100u, 0xC8u)
+        cpu.stackPointer = 0x3456u
+
+        cpu.AF.setZeroFlag(false)
+
+        val cycleCount = cpu.tick()
+        assertEquals(0x101u, cpu.programCounter)
+        assertEquals(0x3456u, cpu.stackPointer)
         assertEquals(8, cycleCount)
     }
 
