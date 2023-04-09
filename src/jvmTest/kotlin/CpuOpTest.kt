@@ -1994,7 +1994,7 @@ class CpuOpTest {
 
         val cycleCount = cpu.tick()
         assertEquals(0x1211u, cpu.programCounter)
-        assertEquals(12, cycleCount)
+        assertEquals(16, cycleCount)
     }
 
     @Test
@@ -2018,7 +2018,7 @@ class CpuOpTest {
 
         val cycleCount = cpu.tick()
         assertEquals(0x1211u, cpu.programCounter)
-        assertEquals(12, cycleCount)
+        assertEquals(16, cycleCount)
     }
 
     @Test
@@ -2029,7 +2029,7 @@ class CpuOpTest {
 
         val cycleCount = cpu.tick()
         assertEquals(0x1112u, cpu.programCounter)
-        assertEquals(12, cycleCount)
+        assertEquals(4, cycleCount)
     }
 
     @Test

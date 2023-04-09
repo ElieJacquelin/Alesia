@@ -1,5 +1,6 @@
 import io.Joypad
 
+@OptIn(ExperimentalStdlibApi::class)
 @ExperimentalUnsignedTypes
 open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean=  false) {
     private val VRAM = 0x8000u..0x9FFFu
@@ -22,6 +23,8 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
     // FF00	  FF7F	I/O Registers
     // FF80	  FFFE	High RAM (HRAM)
     // FFFF	  FFFF	Interrupt Enable register (IE)
+
+    var cpu: CPU? = null
 
     init {
         set(0xFF10u, 0x80u)
@@ -92,6 +95,7 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
         } else if (address == 0xFF04u.toUShort()) {
             // Reset DIV
             memory[address.toInt()] = 0u
+            cpu?.resetDiv()
         }
     }
 

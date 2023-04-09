@@ -1,3 +1,4 @@
+import io.mockk.*
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,10 +9,13 @@ import kotlin.test.assertEquals
 internal class MemoryTest {
 
     lateinit var memory: Memory
+    lateinit var cpu: CPU
 
     @BeforeTest
     fun setUp() {
         memory = Memory()
+        cpu = mockk()
+        memory.cpu = cpu
     }
 
     @Test
@@ -30,6 +34,7 @@ internal class MemoryTest {
 
     @Test
     fun `Reset DIV when writing to 0xFF04`() {
+        every { cpu.resetDiv() } just runs
         // Given some data is already store in Div
         memory.incrementDiv()
 
@@ -38,6 +43,8 @@ internal class MemoryTest {
 
         // Then DIV is reset
         assertEquals(0x00u, memory.get(0xFF04u))
+        // And the CPU internal counter is reset
+        verify { cpu.resetDiv() }
     }
 
     @Test

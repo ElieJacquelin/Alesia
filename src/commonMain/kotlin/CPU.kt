@@ -25,6 +25,8 @@ class CPU(private val memory: Memory) {
 
         stackPointer = 0xFFFEu
         programCounter = 0x100u
+
+        memory.cpu = this
     }
 
 
@@ -80,6 +82,11 @@ class CPU(private val memory: Memory) {
                 timerCycleCount -= timerFrequencyCycles
             }
         }
+    }
+
+    fun resetDiv() {
+        divCycleCount = 0
+        timerCycleCount = 0
     }
 
     private fun setInterrupt(bit: Int) {
@@ -141,6 +148,7 @@ class CPU(private val memory: Memory) {
             0x1Eu -> op({ DE.right = this.readOp() }, 8)
             0x26u -> op({ HL.left = this.readOp() }, 8)
             0x2Eu -> op({ HL.right = this.readOp() }, 8)
+            0x3Eu -> op({ AF.left = readOp() }, 8)
 
             //LD r1, r2 => Load into r1 the value in r2
             // A register
@@ -155,7 +163,6 @@ class CPU(private val memory: Memory) {
             0x1Au -> op({ AF.left = memory.get(DE.both()) }, 8)
             0x7Eu -> op({ AF.left = memory.get(HL.both()) }, 8)
             0xFAu -> op({ AF.left = memory.get(readNN()) }, 16)
-            0x3Eu -> op({ AF.left = readOp() }, 8)
             // B register
             0x40u -> op({ BC.left = BC.left }, 4)
             0x41u -> op({ BC.left = BC.right }, 4)
@@ -798,7 +805,7 @@ class CPU(private val memory: Memory) {
                     // BIT 0 L
                     0x45u -> op({ bit(HL, false, 0) }, 8)
                     // BIT 0 (HL)
-                    0x46u -> op({ bitHL(0) }, 16)
+                    0x46u -> op({ bitHL(0) }, 12)
                     // BIT 0 A
                     0x47u -> op({ bit(AF, true, 0) }, 8)
 
@@ -815,7 +822,7 @@ class CPU(private val memory: Memory) {
                     // BIT 1 L
                     0x4Du -> op({ bit(HL, false, 1) }, 8)
                     // BIT 1 (HL)
-                    0x4Eu -> op({ bitHL(1) }, 16)
+                    0x4Eu -> op({ bitHL(1) }, 12)
                     // BIT 1 A
                     0x4Fu -> op({ bit(AF, true, 1) }, 8)
 
@@ -832,7 +839,7 @@ class CPU(private val memory: Memory) {
                     // BIT 2 L
                     0x55u -> op({ bit(HL, false, 2) }, 8)
                     // BIT 2 (HL)
-                    0x56u -> op({ bitHL(2) }, 16)
+                    0x56u -> op({ bitHL(2) }, 12)
                     // BIT 2 A
                     0x57u -> op({ bit(AF, true, 2) }, 8)
 
@@ -849,7 +856,7 @@ class CPU(private val memory: Memory) {
                     // BIT 3 L
                     0x5Du -> op({ bit(HL, false, 3) }, 8)
                     // BIT 3 (HL)
-                    0x5Eu -> op({ bitHL(3) }, 16)
+                    0x5Eu -> op({ bitHL(3) }, 12)
                     // BIT 3 A
                     0x5Fu -> op({ bit(AF, true, 3) }, 8)
 
@@ -866,7 +873,7 @@ class CPU(private val memory: Memory) {
                     // BIT 4 L
                     0x65u -> op({ bit(HL, false, 4) }, 8)
                     // BIT 4 (HL)
-                    0x66u -> op({ bitHL(4) }, 16)
+                    0x66u -> op({ bitHL(4) }, 12)
                     // BIT 4 A
                     0x67u -> op({ bit(AF, true, 4) }, 8)
 
@@ -883,7 +890,7 @@ class CPU(private val memory: Memory) {
                     // BIT 5 L
                     0x6Du -> op({ bit(HL, false, 5) }, 8)
                     // BIT 5 (HL)
-                    0x6Eu -> op({ bitHL(5) }, 16)
+                    0x6Eu -> op({ bitHL(5) }, 12)
                     // BIT 5 A
                     0x6Fu -> op({ bit(AF, true, 5) }, 8)
 
@@ -900,7 +907,7 @@ class CPU(private val memory: Memory) {
                     // BIT 6 L
                     0x75u -> op({ bit(HL, false, 6) }, 8)
                     // BIT 6 (HL)
-                    0x76u -> op({ bitHL(6) }, 16)
+                    0x76u -> op({ bitHL(6) }, 12)
                     // BIT 6 A
                     0x77u -> op({ bit(AF, true, 6) }, 8)
 
@@ -917,7 +924,7 @@ class CPU(private val memory: Memory) {
                     // BIT 7 L
                     0x7Du -> op({ bit(HL, false, 7) }, 8)
                     // BIT 7 (HL)
-                    0x7Eu -> op({ bitHL(7) }, 16)
+                    0x7Eu -> op({ bitHL(7) }, 12)
                     // BIT 7 A
                     0x7Fu -> op({ bit(AF, true, 7) }, 8)
 
@@ -1294,20 +1301,20 @@ class CPU(private val memory: Memory) {
             }, 4)
 
             // JP nn
-            0xC3u -> op({ jump() }, 12)
+            0xC3u -> op({ jump() }, 16)
 
             // JP NZ nn
-            0xC2u -> op({ jump { !AF.getZeroFlag() } }, 12)
+            0xC2u -> opVariableCycleCount({ jump { !AF.getZeroFlag() } })
             // JP Z nn
-            0xCAu -> op({ jump { AF.getZeroFlag() } }, 12)
+            0xCAu -> opVariableCycleCount({ jump { AF.getZeroFlag() } })
             // JP NC nn
-            0xD2u -> op({ jump { !AF.getCarryFlag() } }, 12)
+            0xD2u -> opVariableCycleCount({ jump { !AF.getCarryFlag() } })
             // JP C nn
-            0xDAu -> op({ jump { AF.getCarryFlag() } }, 12)
+            0xDAu -> opVariableCycleCount({ jump { AF.getCarryFlag() } })
             // JP (HL)
             0xE9u -> op({
                 programCounter = HL.both()
-            }, 12)
+            }, 4)
 
             // JR n
             0x18u -> op({ jumpRelative() }, 12)
@@ -1401,11 +1408,13 @@ class CPU(private val memory: Memory) {
         return 8
     }
 
-    private inline fun jump(predicate: (() -> Boolean) = {true}) {
+    private inline fun jump(predicate: (() -> Boolean) = {true}): Int {
         val jumpAddress = readNN()
         if (predicate.invoke()) {
             programCounter = jumpAddress
+            return 16
         }
+        return 12
     }
 
     private fun readOp() = memory.get(programCounter++)
