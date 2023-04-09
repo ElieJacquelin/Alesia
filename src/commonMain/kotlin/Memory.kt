@@ -1,7 +1,12 @@
 import io.Joypad
 
 @ExperimentalUnsignedTypes
-class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean=  false) {
+open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean=  false) {
+    private val VRAM = 0x8000u..0x9FFFu
+    private val OAM = 0xFE00u..0xFE9Fu
+
+    private var isVRAMLocked = false
+    private var isOAMLocked = false
     private val memory = UByteArray(0x10000)
     // Memory map (from Pan Docs)
     // Start  End	Description	                    Notes
@@ -41,7 +46,16 @@ class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean=  f
         set(0xFF49u, 0xFFu)
     }
 
-    fun get(address: UShort): UByte {
+    fun get(address: UShort, isGPU: Boolean = false): UByte {
+        // Handle VRAM being locked
+        if(!isGPU && VRAM.contains(address) && isVRAMLocked) {
+            return 0xFFu
+        }
+
+        if(!isGPU &&OAM.contains(address) && isOAMLocked) {
+            return 0xFFu
+        }
+
         if(address == 0xFF00u.toUShort()) {
             val joypadControl = memory[0xFF00u.toInt()] and 0b0011_0000u
             return joypad.generateJoypadValue(joypadControl)
@@ -49,10 +63,21 @@ class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean=  f
         return memory[address.toInt()]
     }
 
-    fun set(address: UShort, value:UByte) {
+    fun set(address: UShort, value:UByte, isGPU: Boolean = false) {
         // Prevent writing values onto the ROM itself
         // A significant amount of unit tests writes onto the ROM, we allow an option for those tests to bypass this restriction
         if (address < 0x8000u && !disableWritingToRom) {
+            return
+        }
+
+        // Prevent writing to VRAM if locked
+        // TODO this is causing issue with Tetris, maybe the code is correct but because of timing error this shows up
+//        if(!isGPU && VRAM.contains(address) && isVRAMLocked) {
+//            return
+//        }
+
+        // Prevent writing to OAM if locked (Still allow writing via DMA)
+        if(!isGPU && OAM.contains(address) && isOAMLocked) {
             return
         }
 
@@ -82,5 +107,21 @@ class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean=  f
 
     fun handleKey(key: Joypad.Key, pressed: Boolean) {
         joypad.handleKey(key, pressed)
+    }
+
+    fun lockVRAM() {
+        isVRAMLocked = true
+    }
+
+    fun unlockVRAM() {
+        isVRAMLocked = false
+    }
+
+    fun lockOAM() {
+        isOAMLocked = true
+    }
+
+    fun unlockOAM() {
+        isOAMLocked = false
     }
 }

@@ -47,6 +47,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
             setStatMode(state)
             triggerStatInterruptIfNeeded()
+            memory.lockOAM()
 
             val newSharedState = state.sharedState.copy(currentLineDotCount = 1)
             this.state = State.OAMScan(newSharedState, spritesOnTheCurrentLine = spritesOnTheScanLine)
@@ -70,6 +71,8 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             pixelFetcher.reset(currentLine, backgroundFifo)
 
             setStatMode(state)
+            // Lock VRAM
+            memory.lockVRAM()
         }
 
         val spriteList = state.spritesOnTheCurrentLine.toMutableList()
@@ -164,7 +167,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
     private fun getTileLineData(tileAddress: UShort, lineSprite:UInt): UByte {
         // A sprite takes 2 bytes per line, we can skip to the current line by jumping by a multiple of 2
-        return memory.get((tileAddress + 2u * lineSprite).toUShort())
+        return memory.get((tileAddress + 2u * lineSprite).toUShort(), isGPU = true)
     }
 
     private fun getSpritePixels(tileLowData: UByte, tileHighDate: UByte): Array<Pixel> {
@@ -196,24 +199,24 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
     }
 
     private fun setStatInterrupt() {
-        var interrupt = memory.get(0xFF0Fu)
+        var interrupt = memory.get(0xFF0Fu, isGPU = true)
         interrupt = interrupt or (1u shl 1).toUByte()
-        memory.set(0xFF0Fu, interrupt)
+        memory.set(0xFF0Fu, interrupt, isGPU = true)
     }
 
     private fun setStatMode(state: State) {
-        val stat = memory.get(0xFF41u).and(0b1111_1100u) // Reset first 2 bits to facilitate setting the mode after
+        val stat = memory.get(0xFF41u, isGPU = true).and(0b1111_1100u) // Reset first 2 bits to facilitate setting the mode after
         val newStat = when (state) {
             is State.OAMScan -> stat.or(0b10u) //Bit 1-0: 10
             is State.DrawPixels -> stat.or(0b11u) //Bit 1-0: 11
             is State.HorizontalBlank -> stat.or(0b00u) //Bit 1-0: 00
             is State.VerticalBlank -> stat.or(0b01u) //Bit 1-0: 01
         }
-        memory.set(0xFF41u, newStat)
+        memory.set(0xFF41u, newStat, isGPU = true)
     }
 
     private fun triggerStatInterruptIfNeeded() {
-        val stat = memory.get(0xFF41u)
+        val stat = memory.get(0xFF41u, isGPU = true)
         val currentMode = stat.and(0b11u) // First two bits describe the current mode
         when (currentMode.toUInt()) {
             0u -> if(stat.and(0b1000u) > 0u) setStatInterrupt() // HBlank
@@ -228,13 +231,16 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             setStatMode(state)
             // Trigger horizontal blank interrupt on the first dot
             triggerStatInterruptIfNeeded()
+            // Unlock VRAM
+            memory.unlockVRAM()
+            memory.unlockOAM()
         }
         if (state.sharedState.currentLineDotCount == 456) {
             // Reached the end of HBlank, go for the next line or VBlank
             val newLineNumber = state.sharedState.currentLine + 1
             val newSharedState = state.sharedState.copy(currentLineDotCount = 0, currentLine = newLineNumber)
             // Increment LY counter
-            memory.set(0xFF44u, newLineNumber.toUByte())
+            memory.set(0xFF44u, newLineNumber.toUByte(), isGPU = true)
             if (state.sharedState.currentLine == 143) {
                 this.state = State.VerticalBlank(newSharedState)
             } else {
@@ -249,9 +255,9 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
     }
 
     private fun setVBlankInterrupt() {
-        var interrupt = memory.get(0xFF0Fu)
+        var interrupt = memory.get(0xFF0Fu, isGPU = true)
         interrupt = interrupt or (1u).toUByte()
-        memory.set(0xFF0Fu, interrupt)
+        memory.set(0xFF0Fu, interrupt, isGPU = true)
     }
 
     private fun verticalBlankState(state: State.VerticalBlank) {
@@ -274,12 +280,12 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                 // Start a new frame
                 this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
                 // Reset LY counter
-                memory.set(0xFF44u, 0u)
+                memory.set(0xFF44u, 0u, isGPU = true)
             } else {
                 val newLineNumber = state.sharedState.currentLine + 1
                 this.state = State.VerticalBlank(state.sharedState.copy(currentLine = newLineNumber, currentLineDotCount = 0))
                 // Increment LY counter
-                memory.set(0xFF44u, newLineNumber.toUByte())
+                memory.set(0xFF44u, newLineNumber.toUByte(), isGPU = true)
             }
             return
         }
@@ -305,7 +311,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             val data = mutableListOf<Array<UByte>>()
             // A tile is composed of 8 lines of 2 bytes
             for (i in 0u..15u step 2) {
-                data.add(arrayOf(memory.get((tileAddress + i).toUShort()), memory.get((tileAddress + i + 1u).toUShort())))
+                data.add(arrayOf(memory.get((tileAddress + i).toUShort(), isGPU = true), memory.get((tileAddress + i + 1u).toUShort(), isGPU = true)))
             }
             result.add(Tile(data.toTypedArray(), tileId))
         }
@@ -332,18 +338,18 @@ data class Object(val yPos: Int, val xPos: Int, val tileIndex:UByte, val attribu
     @OptIn(ExperimentalUnsignedTypes::class)
     companion object {
          fun ObjectFromMemoryAddress(baseAddress: UShort, memory: Memory): Object {
-             val yPos: Int = memory.get(baseAddress).toInt()
-             val xPos: Int = memory.get((baseAddress+1u).toUShort()).toInt()
-             val tileIndex:UByte = memory.get((baseAddress+2u).toUShort())
-             val attributesFlags:UByte = memory.get((baseAddress+3u).toUShort())
+             val yPos: Int = memory.get(baseAddress, isGPU = true).toInt()
+             val xPos: Int = memory.get((baseAddress+1u).toUShort(), isGPU = true).toInt()
+             val tileIndex:UByte = memory.get((baseAddress+2u).toUShort(), isGPU = true)
+             val attributesFlags:UByte = memory.get((baseAddress+3u).toUShort(), isGPU = true)
 
              return Object(yPos, xPos, tileIndex, attributesFlags, baseAddress)
          }
          fun storeObjectInMemory(obj: Object, memory: Memory) {
-             memory.set(obj.baseAddress, obj.yPos.toUByte())
-             memory.set((obj.baseAddress+1u).toUShort(), obj.xPos.toUByte())
-             memory.set((obj.baseAddress+2u).toUShort(), obj.tileIndex)
-             memory.set((obj.baseAddress+3u).toUShort(), obj.attributesFlags)
+             memory.set(obj.baseAddress, obj.yPos.toUByte(), isGPU = true)
+             memory.set((obj.baseAddress+1u).toUShort(), obj.xPos.toUByte(), isGPU = true)
+             memory.set((obj.baseAddress+2u).toUShort(), obj.tileIndex, isGPU = true)
+             memory.set((obj.baseAddress+3u).toUShort(), obj.attributesFlags, isGPU = true)
          }
      }
 }

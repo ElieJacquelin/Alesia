@@ -36,7 +36,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
         if (state.dotCount >= 1) {
             // TODO handle scrolling
             val mapTile = if (controlRegister.getBgTileMap()) 0x9C00u else 0x9800u
-            val tileID =  memory.get((mapTile + currentTileMapOffset + (0x20u * (state.sharedState.currentLine / 8).toUInt())).toUShort())
+            val tileID =  memory.get((mapTile + currentTileMapOffset + (0x20u * (state.sharedState.currentLine / 8).toUInt())).toUShort(), isGPU = true)
 
             this.state = State.GetTileDataLow(state.sharedState, tileID)
             return
@@ -95,7 +95,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
 
     private fun getTileLineData(tileAddress: UShort, lineSprite:UInt): UByte {
         // A sprite takes 2 bytes per line, we can skip to the current line by jumping by a multiple of 2
-        return memory.get((tileAddress + 2u * lineSprite).toUShort())
+        return memory.get((tileAddress + 2u * lineSprite).toUShort(), isGPU = true)
     }
 
     private fun pushToFifoStep(state: State.Push) {
