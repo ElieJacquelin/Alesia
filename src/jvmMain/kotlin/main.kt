@@ -5,16 +5,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.runtime.key
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -35,6 +31,7 @@ import okio.Path.Companion.toPath
 //    alesia.runRom(FileSystem.SYSTEM, "C:\\Users\\eliej\\Downloads\\gb\\instr_timing.gb".toPath())
 //}
 
+@OptIn(ExperimentalStdlibApi::class)
 val alesia = Alesia()
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -77,10 +74,15 @@ fun main() = application {
         }
     ) {
         MaterialTheme() {
+            var isRunning by remember { mutableStateOf(false) }
 
             Column(Modifier.fillMaxSize().background(Color.LightGray), Arrangement.spacedBy(5.dp)) {
-                Button(modifier = Modifier.align(Alignment.CenterHorizontally),
+                Button(modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .onPreviewKeyEvent { true }, // Disable keyboard actions which would trigger onClick
+                    enabled = !isRunning,
                     onClick = {
+                        isRunning = true
                         emulatorScope.launch(newSingleThreadContext("emulator")) {
                             alesia.runRom(FileSystem.SYSTEM, "C:\\Users\\eliej\\Downloads\\gb\\Tetris.gb".toPath())
                         }

@@ -2,8 +2,8 @@ import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("multiplatform") version "1.6.10"
-    id("org.jetbrains.compose") version "1.1.0"
+    kotlin("multiplatform") version "1.8.10"
+    id("org.jetbrains.compose") version "1.4.0-rc01"
 }
 
 group = "me.eliej"
@@ -43,7 +43,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
                 implementation("com.squareup.okio:okio:$okioVersion")
                 implementation(compose.desktop.currentOs)
             }
@@ -77,6 +77,10 @@ kotlin {
 //        }
 //        val nativeMain by getting
 //        val nativeTest by getting
+    }
+
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions.jvmTarget = "11"
     }
 }
 
