@@ -1,6 +1,6 @@
 package rendering
 
-import Memory
+import memory.Memory
 import kotlin.test.*
 
 @OptIn(ExperimentalUnsignedTypes::class)

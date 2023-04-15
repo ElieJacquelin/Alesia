@@ -1,6 +1,6 @@
 package rendering
 
-import Memory
+import memory.Memory
 
 class LcdControlRegister(val memory: Memory) {
 

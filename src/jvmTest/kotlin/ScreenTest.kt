@@ -1,4 +1,5 @@
 import io.mockk.*
+import memory.Memory
 import rendering.LcdControlRegister
 import rendering.PixelFetcher
 import kotlin.test.*

@@ -1,3 +1,4 @@
+import memory.Memory
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,6 +14,7 @@ class CpuTimerTest {
     @BeforeTest
     fun setup() {
         memory = Memory()
+        memory.loadRom(UByteArray(0x8000)) // MBC0 ROM
         cpu = CPU(memory)
         cpu.stackPointer = 0x100u
     }

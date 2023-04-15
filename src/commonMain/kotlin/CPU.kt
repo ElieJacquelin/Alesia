@@ -1,3 +1,5 @@
+import memory.Memory
+
 @ExperimentalStdlibApi
 class CPU(private val memory: Memory) {
     val frequency = 4194304 // 4.194304 MHz

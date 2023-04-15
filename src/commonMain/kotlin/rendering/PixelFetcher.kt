@@ -1,7 +1,7 @@
 package rendering
 
 import ColorID
-import Memory
+import memory.Memory
 import Pixel
 
 @ExperimentalUnsignedTypes

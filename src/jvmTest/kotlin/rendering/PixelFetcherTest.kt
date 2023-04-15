@@ -1,6 +1,6 @@
 package rendering
 
-import Memory
+import memory.Memory
 import Pixel
 import kotlin.test.BeforeTest
 import kotlin.test.Test

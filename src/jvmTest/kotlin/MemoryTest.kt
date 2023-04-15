@@ -1,4 +1,5 @@
 import io.mockk.*
+import memory.Memory
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,6 +15,7 @@ internal class MemoryTest {
     @BeforeTest
     fun setUp() {
         memory = Memory()
+        memory.loadRom(UByteArray(0x8000)) // Default MBC0 ROM
         cpu = mockk()
         memory.cpu = cpu
     }
@@ -50,7 +52,9 @@ internal class MemoryTest {
     @Test
     fun `Load ROM`() {
         // Given a ROM is ready to be loaded
-        val rom = UByteArray(2) { 0x12u }
+        val rom = UByteArray(0x200) { 0x12u }
+        rom[0x0147] = 0x00u // And MBC is MBC0
+        rom[0x0149] = 0x00u // And RAM is not available
 
         // When loading the ROM
         memory.loadRom(rom)
@@ -62,6 +66,10 @@ internal class MemoryTest {
 
     @Test
     fun `Writing onto ROM is disabled`() {
+        // Given the bypass is not set
+        val memory = Memory(disableWritingToRom = true)
+        memory.loadRom(UByteArray(0x2000))
+
         // When trying to write a value onto a ROM address
         memory.set(0x1234u, 0x12u)
 
@@ -72,7 +80,8 @@ internal class MemoryTest {
     @Test
     fun `Allow bypassing ROM write restriction`() {
         // Given the bypass is set
-        val memory = Memory(disableWritingToRom = true)
+        val memory = Memory(disableWritingToRom = false)
+        memory.loadRom(UByteArray(0x2000))
 
         // When trying to write a value onto a ROM address
         memory.set(0x1234u, 0x12u)

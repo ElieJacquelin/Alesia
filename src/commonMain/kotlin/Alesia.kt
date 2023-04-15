@@ -3,6 +3,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.Joypad
 import kotlinx.coroutines.delay
+import memory.Memory
 import okio.FileSystem
 import okio.Path
 import okio.buffer
@@ -45,8 +46,9 @@ class Alesia: Screen.FrameUpdateListener {
     }
 
     private fun loadRom(fileSystem: FileSystem, path: Path): UByteArray {
-        val rom = ByteArray(0x8000)
 
+        val romSize = fileSystem.metadata(path).size
+        val rom = ByteArray(romSize!!.toInt())
         val buffer = fileSystem.source(path).buffer()
         buffer.readFully(rom)
 

@@ -1,3 +1,4 @@
+import memory.Memory
 import rendering.LcdControlRegister
 import rendering.PixelFetcher
 
