@@ -1,3 +1,4 @@
+import junit.framework.TestCase.assertTrue
 import memory.Memory
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -98,5 +99,20 @@ class CpuInterruptTest {
 
         // Then the halt is disabled
         assertFalse(cpu.halt)
+    }
+
+    @Test
+    fun `CPU ticks when halted without interrupt`() {
+        // Given interrupt master is disabled
+        cpu.interruptMasterEnabled = false
+        // And no interrupt are set
+        // And CPU is halted
+        cpu.halt = true
+
+        // When the cpu ticks
+        cpu.tick()
+
+        // Then the halt is still active
+        assertTrue(cpu.halt)
     }
 }

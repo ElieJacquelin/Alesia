@@ -135,7 +135,7 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
     fun loadRom(rom: UByteArray) {
         // Load the RAM amount
         val ramSize = when(rom[0x149].toUInt()) {
-            0x00u, 0x01u -> 0
+            0x00u, 0x01u -> 0x2000
             0x02u -> 0x2000
             0x03u -> 0x8000
             0x04u -> 0x2_0000

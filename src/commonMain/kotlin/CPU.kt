@@ -38,9 +38,10 @@ class CPU(private val memory: Memory) {
         updateTimers(cycleCount)
         handleInterrupts()
         // wait for interruption if CPU has been halted
-        while (halt) {
+        if (halt) {
             handleInterrupts()
             updateTimers(4)
+            return 4
         }
         actionAfterInstruction?.invoke()
         return cycleCount
