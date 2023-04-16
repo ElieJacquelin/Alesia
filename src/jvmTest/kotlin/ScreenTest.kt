@@ -989,4 +989,71 @@ internal class ScreenTest {
         // And LY is updated
         assertEquals(144.toUByte(), memory.get(0xFF44u))
     }
+
+    @Test
+    fun `LYC=LY Stat register - Set`() {
+        // Given the LYC register is set to line 144
+        memory.set(0xFF45u, 144u)
+        // And the current line is 143
+        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
+        screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
+
+        // When moving to line 144
+        screen.tick()
+
+        // Then the LYC=LY State register is set
+        val flag = memory.get(0xFF41u) and 0b100u
+        assertTrue(flag.toUInt() > 0u)
+    }
+
+    @Test
+    fun `LYC=LY Stat register - Unset`() {
+        // Given the LYC register is set to line 143
+        memory.set(0xFF45u, 143u)
+        memory.set(0xFF41u, 0b100u)
+        // And the current line is 143
+        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
+        screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
+
+        // When moving to line 144
+        screen.tick()
+
+        // Then the LYC=LY State register is unset
+        val flag = memory.get(0xFF41u) and 0b100u
+        assertTrue(flag.toUInt() == 0u)
+    }
+
+    @Test
+    fun `LYC=LY Stat interrupt`() {
+        // Given the LYC register is set to line 143
+        memory.set(0xFF45u, 143u)
+        // And the LYC=LY interrupt is set
+        memory.set(0xFF41u, 0b100_0000u)
+        // And the current line is 143
+        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
+        screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
+
+        // When moving to line 144
+        screen.tick()
+
+        // Then the stat interrupt is set
+        assertEquals(0b0000_0010u, memory.get(0xFF0Fu))
+    }
+
+    @Test
+    fun `LYC=LY Stat interrupt - Disabled`() {
+        // Given the LYC register is set to line 143
+        memory.set(0xFF45u, 143u)
+        // And the LYC=LY interrupt is disabled
+        memory.set(0xFF41u, 0b000_0000u)
+        // And the current line is 143
+        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
+        screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
+
+        // When moving to line 144
+        screen.tick()
+
+        // Then the stat interrupt is not set
+        assertEquals(0b0000_0000u, memory.get(0xFF0Fu))
+    }
 }

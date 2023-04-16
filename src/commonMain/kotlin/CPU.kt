@@ -33,16 +33,16 @@ class CPU(private val memory: Memory) {
 
 
     fun tick(): Int {
-        val instruction = this.readOp()
-        val (cycleCount, actionAfterInstruction) = decodeAndExecute(instruction)
-        updateTimers(cycleCount)
-        handleInterrupts()
         // wait for interruption if CPU has been halted
         if (halt) {
             handleInterrupts()
             updateTimers(4)
             return 4
         }
+        val instruction = this.readOp()
+        val (cycleCount, actionAfterInstruction) = decodeAndExecute(instruction)
+        updateTimers(cycleCount)
+        handleInterrupts()
         actionAfterInstruction?.invoke()
         return cycleCount
     }

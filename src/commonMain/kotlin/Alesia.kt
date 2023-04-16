@@ -7,6 +7,7 @@ import memory.Memory
 import okio.FileSystem
 import okio.Path
 import okio.buffer
+import java.time.Instant.now
 
 
 @ExperimentalStdlibApi
@@ -19,6 +20,7 @@ class Alesia: Screen.FrameUpdateListener {
     val screen = Screen(memory).apply { frameUpdateListener = this@Alesia }
 
     var shouldSleep = false
+    var clockStart = now()
 
     init {
 
@@ -30,7 +32,9 @@ class Alesia: Screen.FrameUpdateListener {
 
         while (true) {
             cpu.tick()
-            screen.tick()
+            for (i in 0..3) {
+                screen.tick()
+            }
             //Blargg test output
             if (memory.get(0xff02u) == 0x81u.toUByte()) {
                 val code = memory.get(0xff01u).toInt().toChar()
@@ -38,7 +42,12 @@ class Alesia: Screen.FrameUpdateListener {
                 memory.set(0xff02u, 0u)
             }
             if (shouldSleep) {
-                delay(32)
+                val clockEnd = now()
+                val sleepDuration = 16 -(clockEnd.toEpochMilli() - clockStart.toEpochMilli())
+                if ( sleepDuration> 0){
+                    delay(sleepDuration)
+                }
+                clockStart = clockEnd
                 shouldSleep = false
             }
         }

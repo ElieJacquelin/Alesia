@@ -108,6 +108,48 @@ class PixelFetcherTest {
     }
 
     @Test
+    fun `Get tile step - Line 8 - Scroll X and Y`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 8th line
+        val sharedState = buildSharedState(currentLine = 8)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setBgTileMap(false)
+        // AND the Scroll X is set to 16 (2 tiles)
+        memory.set(0xFF43u, 16u)
+        // AND the Scroll Y is set to 24 (3 tiles)
+        memory.set(0xFF42u, 24u)
+        // AND the tile ID to be fetched is set to 2 (0x9800 + 2 (SCX/8) + 0x20 * ((currentLine / 8) + 3 (SCY/8))
+        memory.set(0x9882u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Line 8 - Scroll X and Y- Wrap around`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 16th line and 4th tile
+        val sharedState = buildSharedState(currentLine = 16, currentTileMapOffset = 4u)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setBgTileMap(false)
+        // AND the Scroll X is set to 240 (30 tiles)
+        memory.set(0xFF43u, 240u)
+        // AND the Scroll Y is set to 248 (31 tiles)
+        memory.set(0xFF42u, 248u)
+        // AND the tile ID to be fetched is set to 2 (0x9800 + 2 (SCX/8 % 32) + 0x20 * ((currentLine / 8) + 31 (SCY/8) % 32)
+        memory.set(0x9822u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
     fun `Get tile Data low step - first dot`() {
         // GIVEN the PixelFetcher is on the tile data low step on the first dot
         val sharedState = buildSharedState()

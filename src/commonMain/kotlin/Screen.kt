@@ -241,7 +241,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             val newLineNumber = state.sharedState.currentLine + 1
             val newSharedState = state.sharedState.copy(currentLineDotCount = 0, currentLine = newLineNumber)
             // Increment LY counter
-            memory.set(0xFF44u, newLineNumber.toUByte(), isGPU = true)
+            updateLYCounter(newLineNumber.toUByte())
             if (state.sharedState.currentLine == 143) {
                 this.state = State.VerticalBlank(newSharedState)
             } else {
@@ -253,6 +253,28 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         // Continue HBlank
         val currentLintDotCount = state.sharedState.currentLineDotCount
         this.state = State.HorizontalBlank(state.sharedState.copy(currentLineDotCount = currentLintDotCount + 1), state.dotCountInStep + 1)
+    }
+
+    private fun updateLYCounter(newLineNumber: UByte) {
+        // Update actual LY counter
+        memory.set(0xFF44u, newLineNumber, isGPU = true)
+        // Compare LYC register
+        val lyc = memory.get(0xff45u, isGPU = true)
+
+        // Update Stat register accordingly
+        val statRegister = memory.get(0xFF41u)
+        val newStatRegister = if (lyc == newLineNumber) {
+            statRegister or 0b0000_0100u
+        } else {
+            statRegister and 0b1111_1011u
+        }
+        memory.set(0xFF41u, newStatRegister, isGPU = true)
+
+        // Trigger Stat interrupt if needed
+        if(newStatRegister and 0b0100_0000u > 0u) {
+            // LYC=LY interrupt source is enabled
+            setStatInterrupt()
+        }
     }
 
     private fun setVBlankInterrupt() {
@@ -281,12 +303,12 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                 // Start a new frame
                 this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
                 // Reset LY counter
-                memory.set(0xFF44u, 0u, isGPU = true)
+                updateLYCounter(0u)
             } else {
                 val newLineNumber = state.sharedState.currentLine + 1
                 this.state = State.VerticalBlank(state.sharedState.copy(currentLine = newLineNumber, currentLineDotCount = 0))
                 // Increment LY counter
-                memory.set(0xFF44u, newLineNumber.toUByte(), isGPU = true)
+                updateLYCounter(newLineNumber.toUByte())
             }
             return
         }
