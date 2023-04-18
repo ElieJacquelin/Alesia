@@ -5,6 +5,7 @@ import Pixel
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
@@ -147,6 +148,100 @@ class PixelFetcherTest {
 
         // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
         assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Before Window`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 8th line
+        val sharedState = buildSharedState(currentLine = 8)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the window is enabled
+        lcdControlRegister.setWindowEnabled(true)
+        // AND the windowX is set to 11
+        val windowX = memory.set(0xFF4Bu, 11u)
+        // AND the window Y is set to 16
+        val windowY = memory.set(0xFF4Au, 16u)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setWindowTileMap(false)
+        // AND the tile ID to be fetched is set to 2 (0x9800 + 0x20 * (currentLine / 8))
+        memory.set(0x9820u, 0x02u)
+        // AND the tile ID of the window to be fetched is set to 3 (0x9800 + (WinX - 7) + 0x20 * ((currentLine - WinY) / 8)
+        memory.set(0x9800u, 0x03u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID which is on from the background
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Window`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 16th line and 4th tile
+        val sharedState = buildSharedState(currentLine = 16, currentTileMapOffset = 4u)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the window is enabled
+        lcdControlRegister.setWindowEnabled(true)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setWindowTileMap(false)
+        // AND the windowX is set to 11
+        val windowX = memory.set(0xFF4Bu, 11u)
+        // AND the window Y is set to 16
+        val windowY = memory.set(0xFF4Au, 16u)
+        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) + 0x20 * ((currentLine - WinY) / 8)
+        memory.set(0x9800u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID from the Window
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - After Window`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 17th line and 4th tile
+        val sharedState = buildSharedState(currentLine = 16, currentTileMapOffset = 4u)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the window is enabled
+        lcdControlRegister.setWindowEnabled(true)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setWindowTileMap(false)
+        // AND the windowX is set to 11
+        val windowX = memory.set(0xFF4Bu, 11u)
+        // AND the window Y is set to 16
+        val windowY = memory.set(0xFF4Au, 16u)
+        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) + 0x20 * ((currentLine - WinY) / 8)
+        memory.set(0x9800u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID from the Window
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Window disabled`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 16th line and 4th tile
+        val sharedState = buildSharedState(currentLine = 16, currentTileMapOffset = 4u)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the window is disabled
+        lcdControlRegister.setWindowEnabled(false)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setWindowTileMap(false)
+        // AND the windowX is set to 11
+        val windowX = memory.set(0xFF4Bu, 11u)
+        // AND the window Y is set to 16
+        val windowY = memory.set(0xFF4Au, 16u)
+        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) + 0x20 * ((currentLine - WinY) / 8)
+        memory.set(0x9800u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the tile that is not the window
+        assertNotEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
     }
 
     @Test

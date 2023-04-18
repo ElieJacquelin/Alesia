@@ -34,6 +34,25 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
     private fun getTileStep(state: State.GetTile) {
         val (currentTileMapOffset) = state.sharedState
         if (state.dotCount >= 1) {
+            // Window check
+            if(controlRegister.getWindowEnabled()) {
+                val windowY = memory.get(0xFF4Au)
+                val windowX = memory.get(0xFF4Bu)
+                val relativeWindowX = if(windowX > 7u) windowX - 7u else 0u
+                if(state.sharedState.currentLine.toUByte() >= windowY &&
+                    currentTileMapOffset >= relativeWindowX) {
+                    // The current pixel is in the window
+                    val mapTile = if(controlRegister.getWindowTileMap()) 0x9C00u else 0x9800u
+                    val tileIDx = (currentTileMapOffset - relativeWindowX)
+                    val tileIDy = ((state.sharedState.currentLine.toUByte() - windowY) / 8u)
+                    val tileID = memory.get((mapTile + tileIDx + (0x20u * tileIDy)).toUShort(), isGPU = true)
+
+                    this.state = State.GetTileDataLow(state.sharedState, tileID)
+                    return
+                }
+            }
+
+            // Background
             val mapTile = if (controlRegister.getBgTileMap()) 0x9C00u else 0x9800u
             val scrollY = memory.get(0xFF42u, isGPU = true) // Number of pixels scroll to the right
             val scrollX = memory.get(0xFF43u, isGPU = true)
