@@ -8,6 +8,10 @@ import io.Joypad
 @ExperimentalUnsignedTypes
 open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolean = true) {
 
+    // Disable memory lock during rendering stages as the timing is too off
+    // Locking memory creates more rendering problems
+    private val DISABLE_MEMORY_LOCK = true
+
     private var isVRAMLocked = false
     private var isOAMLocked = false
 
@@ -61,7 +65,7 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
         return when(address) {
             in 0x0000u..0x7FFFu -> mbc.get(address) // Cartridge ROM
             in 0x8000u..0x9FFFu -> { // VRAM
-                if(!isGPU && isVRAMLocked) {
+                if(!isGPU && isVRAMLocked && !DISABLE_MEMORY_LOCK) {
                     0xFFu
                 } else {
                     vram[((address - 0x8000u).toInt())]
@@ -71,7 +75,7 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
             in 0xC000u..0xDFFFu -> wram[(address - 0xC000u).toInt()] // Work RAM
             in 0xE000u..0xFDFFu -> wram[(address - 0xE000u).toInt()] // Echo
             in 0xFE00u..0xFE9Fu -> { // OAM
-                if(!isGPU && isOAMLocked) {
+                if(!isGPU && isOAMLocked && !DISABLE_MEMORY_LOCK) {
                     0xFFu
                 } else {
                     oamAndMore[(address - 0xFE00u).toInt()]
@@ -92,10 +96,9 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
         when(address) {
             in 0x0000u..0x7FFFu -> mbc.set(address, value) // Cartridge ROM
             in 0x8000u..0x9FFFu -> { // VRAM
-                // TODO this is causing issue with Tetris, maybe the code is correct but because of timing error this shows up
-//        if(!isGPU && VRAM.contains(address) && isVRAMLocked) {
-//            return
-//        }
+                if(!isGPU && isVRAMLocked && !DISABLE_MEMORY_LOCK) {
+                    return
+                }
 
                 vram[((address - 0x8000u).toInt())] = value
             }
@@ -104,7 +107,7 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
             in 0xE000u..0xFDFFu -> {} // Echo, ignore writes
             in 0xFE00u..0xFE9Fu -> { // OAM
                 // Prevent writing to OAM if locked (Still allow writing via DMA)
-                if(!isGPU && isOAMLocked) {
+                if(!isGPU && isOAMLocked && !DISABLE_MEMORY_LOCK) {
                     return
                 } else {
                     oamAndMore[(address - 0xFE00u).toInt()] = value
