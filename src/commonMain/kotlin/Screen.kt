@@ -113,6 +113,11 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                     )
                     val spritePixels = getSpritePixels(spriteLineDataLow, spriteLineDataHigh)
 
+                    if (spriteToBeDrawn.attributesFlags and 0b0010_0000u > 0u) {
+                        // Horizontal flip
+                        spritePixels.reverse()
+                    }
+
                     // Start filling object fifo with lowest priority pixel until reaching the needed size
                     while (objectFifo.size < 8) {
                         objectFifo.add(Pixel(ColorID.ZERO, 0, false))
@@ -144,8 +149,10 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             val pixelToBeDrawn = if(controlRegister.getSpriteEnabled() && pixelSprite != null && pixelSprite.colorId != ColorID.ZERO) {
                 // TODO need to check background priority
                 pixelSprite
-            } else {
+            } else if(controlRegister.getBgAndWindowEnabled()) {
                 pixelBackground
+            } else {
+                Pixel(ColorID.ZERO, 0, false)
             }
             currentLinePixels.add(pixelToBeDrawn)
         }
@@ -352,6 +359,10 @@ data class Object(val yPos: Int, val xPos: Int, val tileIndex:UByte, val attribu
         // However sprites are shifted 16 lines up: Y=0 doesn't show on the screen
        if(yPos - 16 <= ly && ly <= yPos - 16 + (spriteSize - 1)) {
            // Sprite is visible
+           if(attributesFlags and 0b0100_0000u >= 1u) {
+               // Flip vertically
+               return spriteSize - (ly - yPos + 16)
+           }
            return ly - yPos + 16
        }
         // Sprite is not visible for the current scan line
