@@ -65,6 +65,9 @@ fun main() = application {
                 Joypad.Key.Left
             } else if (it.key == Key.DirectionRight) {
                 Joypad.Key.Right
+            } else if (it.key == Key.Spacebar) {
+                alesia.triggerSpeedMode(pressed)
+                return@Window true
             } else {
                 // Unknown key, abort here
                 return@Window true

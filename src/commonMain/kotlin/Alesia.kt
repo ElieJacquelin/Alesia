@@ -21,6 +21,7 @@ class Alesia: Screen.FrameUpdateListener {
 
     var shouldSleep = false
     var clockStart = now()
+    var speedMode = false
 
     init {
 
@@ -41,7 +42,7 @@ class Alesia: Screen.FrameUpdateListener {
                 print("$code")
                 memory.set(0xff02u, 0u)
             }
-            if (shouldSleep) {
+            if (shouldSleep && !speedMode) {
                 val clockEnd = now()
                 val sleepDuration = 16 -(clockEnd.toEpochMilli() - clockStart.toEpochMilli())
                 if ( sleepDuration> 0){
@@ -90,5 +91,9 @@ class Alesia: Screen.FrameUpdateListener {
 
         this.frameBitmap = frameRgb
         shouldSleep = true
+    }
+
+    fun triggerSpeedMode(pressed: Boolean) {
+        speedMode = pressed
     }
 }
