@@ -278,7 +278,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         memory.set(0xFF41u, newStatRegister, isGPU = true)
 
         // Trigger Stat interrupt if needed
-        if(newStatRegister and 0b0100_0000u > 0u) {
+        if((lyc == newLineNumber) && newStatRegister and 0b0100_0000u > 0u) {
             // LYC=LY interrupt source is enabled
             setStatInterrupt()
         }

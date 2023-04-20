@@ -629,7 +629,7 @@ internal class ScreenTest {
         every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
 
         // Given there is a sprite to be drawn at X 0, Y 20
-        val sprite = Object(36, 8, 0xFFu, 0xFFu, 0xFFFFu)
+        val sprite = Object(36, 8, 0xFFu, 0x00u, 0xFFFFu)
         //With data for the first line: low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
         memory.set(0x8FF0u, 0x06u)
         memory.set(0x8FF1u, 0x03u)
@@ -778,7 +778,7 @@ internal class ScreenTest {
         every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
 
         // Given there is a sprite to be drawn at X 0, Y 20
-        val sprite = Object(36, 8, 0xFFu, 0xFFu, 0xFFFFu)
+        val sprite = Object(36, 8, 0xFFu, 0x00u, 0xFFFFu)
         //With data for the first line: low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
         memory.set(0x8FF0u, 0x06u)
         memory.set(0x8FF1u, 0x03u)
@@ -833,8 +833,8 @@ internal class ScreenTest {
         every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
 
         // Given there is 2 sprite to be drawn at X 0, Y 20 with sprite 1 being lower in the base address
-        val sprite1 = Object(36, 8, 0xFFu, 0xFFu, 0xFFFEu)
-        val sprite2 = Object(36, 8, 0xFEu, 0xFFu, 0xFFFFu)
+        val sprite1 = Object(36, 8, 0xFFu, 0x00u, 0xFFFEu)
+        val sprite2 = Object(36, 8, 0xFEu, 0x00u, 0xFFFFu)
         //With data for the first line of sprite 1: low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
         memory.set(0x8FF0u, 0x06u)
         memory.set(0x8FF1u, 0x03u)
@@ -1166,8 +1166,8 @@ internal class ScreenTest {
 
     @Test
     fun `LYC=LY Stat interrupt`() {
-        // Given the LYC register is set to line 143
-        memory.set(0xFF45u, 143u)
+        // Given the LYC register is set to line 144
+        memory.set(0xFF45u, 144u)
         // And the LYC=LY interrupt is set
         memory.set(0xFF41u, 0b100_0000u)
         // And the current line is 143
