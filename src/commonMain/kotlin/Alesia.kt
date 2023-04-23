@@ -76,11 +76,12 @@ class Alesia: Screen.FrameUpdateListener {
         val frameRgb = ByteArray(160 * 144 * 4)
         frame.flatten().forEachIndexed { index, pixel ->
             val pixelIndex = index * 4
-            val (red, green, blue) = when (pixel.colorId) {
-                ColorID.ZERO -> Triple(0b11111111, 0b11111111, 0b11111111) // White
-                ColorID.ONE -> Triple(0b10101001, 0b10101001, 0b10101001) // Light grey
-                ColorID.TWO -> Triple(0b01010100, 0b01010100, 0b01010100) // Dark grey
-                ColorID.THREE -> Triple(0, 0, 0) // Black
+            val (red, green, blue) = when (pixel.colorValue) {
+                0 -> Triple(0b11111111, 0b11111111, 0b11111111) // White
+                1 -> Triple(0b10101001, 0b10101001, 0b10101001) // Light grey
+                2 -> Triple(0b01010100, 0b01010100, 0b01010100) // Dark grey
+                3 -> Triple(0, 0, 0) // Black
+                else -> throw Exception("Wrong color value being used")
             }
 
             frameRgb[pixelIndex] = red.toByte()

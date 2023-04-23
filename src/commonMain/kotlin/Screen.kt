@@ -4,15 +4,17 @@ import rendering.PixelFetcher
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdControlRegister(memory), backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), objectFifo: ArrayDeque<Pixel> = ArrayDeque(), pixelFetcher: PixelFetcher = PixelFetcher(controlRegister, memory)) {
-    var tiles = generateTiles()
     var OAM = generateOAM()
     internal var state: State = State.OAMScan(SharedState(0, 0,  List(160) { ArrayList() }, backgroundFifo, objectFifo, pixelFetcher))
 
     internal sealed class State {
-        data class HorizontalBlank(val sharedState: SharedState, val dotCountInStep: Int = 0): State()
-        data class VerticalBlank(val sharedState: SharedState): State()
-        data class OAMScan(val sharedState: SharedState,  val spritesOnTheCurrentLine: List<Object> = emptyList()): State()
-        data class DrawPixels(val sharedState: SharedState, val currentXScanLine: Int = 0, val spriteFetchingState: SpriteFetchingState = SpriteFetchingState(), val spritesOnTheCurrentLine: List<Object>): State()
+        abstract val sharedState: SharedState
+
+        data class Disabled(override val sharedState: SharedState): State()
+        data class HorizontalBlank(override val sharedState: SharedState, val dotCountInStep: Int = 0): State()
+        data class VerticalBlank(override val sharedState: SharedState): State()
+        data class OAMScan(override val sharedState: SharedState, val spritesOnTheCurrentLine: List<Object> = emptyList()): State()
+        data class DrawPixels(override val sharedState: SharedState, val currentXScanLine: Int = 0, val spriteFetchingState: SpriteFetchingState = SpriteFetchingState(), val spritesOnTheCurrentLine: List<Object>): State()
     }
 
     internal data class SharedState(val currentLineDotCount: Int, val currentLine: Int, val frame: List<ArrayList<Pixel>>, val backgroundFifo: ArrayDeque<Pixel>, val objectFifo: ArrayDeque<Pixel>, val pixelFetcher: PixelFetcher)
@@ -24,13 +26,34 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         fun onFrameUpdate(frame: Array<Array<Pixel>>)
     }
 
+    private fun disablePPU() {
+        this.state = State.Disabled(this.state.sharedState)
+        // Reset LY counter
+        updateLYCounter(0u)
+    }
+
+    private fun enablePPU() {
+        // Start a new frame
+        this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
+        // Reset LY counter
+        updateLYCounter(0u)
+    }
+
     // Each tick represents 1 dot
     fun tick() {
+        // LCD off check
+        if (memory.get(0xFF40u) and 0b1000_0000u == 0u.toUByte()) {
+            disablePPU()
+        } else if (state is State.Disabled) {
+            enablePPU()
+        }
+
         when (state) {
             is State.OAMScan -> oamScan(state as State.OAMScan)
             is State.DrawPixels -> drawingPixel(state as State.DrawPixels)
             is State.HorizontalBlank -> horizontalBlankState(state as State.HorizontalBlank)
             is State.VerticalBlank -> verticalBlankState(state as State.VerticalBlank)
+            is State.Disabled -> {} // Ignore
         }
     }
 
@@ -45,6 +68,13 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                 sprite.getSpriteLineForCurrentScanLine(currentLine, controlRegister) != -1
             }.sortedBy { sprite -> sprite.xPos //Sort by increasing X position
             }.take(10) // Ignore sprites after 10 consecutive sprites
+            .map { sprite ->
+                if(controlRegister.getSpriteSizeEnabled()) {
+                   sprite.copy(tileIndex = sprite.tileIndex and 0b1111_1110u) // Ignore bit 0 of 16*8 sprites
+                } else {
+                    sprite
+                }
+            }
 
             setStatMode(state)
             triggerStatInterruptIfNeeded()
@@ -111,7 +141,9 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                         (spriteTileAddress + 1u).toUShort(),
                         spriteToBeDrawn.getSpriteLineForCurrentScanLine(currentLine, controlRegister).toUInt()
                     )
-                    val spritePixels = getSpritePixels(spriteLineDataLow, spriteLineDataHigh)
+                    val backgroundPriority = spriteToBeDrawn.attributesFlags and 0b1000_0000u > 0u
+                    val palette = if(spriteToBeDrawn.attributesFlags and 0b0001_0000u > 0u) 1 else 0
+                    val spritePixels = getSpritePixels(spriteLineDataLow, spriteLineDataHigh, backgroundPriority, palette)
 
                     if (spriteToBeDrawn.attributesFlags and 0b0010_0000u > 0u) {
                         // Horizontal flip
@@ -120,7 +152,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
                     // Start filling object fifo with lowest priority pixel until reaching the needed size
                     while (objectFifo.size < 8) {
-                        objectFifo.add(Pixel(ColorID.ZERO, 0, false))
+                        objectFifo.add(Pixel(ColorID.ZERO,0, 0, false))
                     }
 
                     // Start adding the sprites pixels to the queue
@@ -146,13 +178,26 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         val currentLinePixels = frame[currentLine]
         if(pixelBackground != null) {
             val pixelSprite = objectFifo.removeFirstOrNull()
-            val pixelToBeDrawn = if(controlRegister.getSpriteEnabled() && pixelSprite != null && pixelSprite.colorId != ColorID.ZERO) {
-                // TODO need to check background priority
+            val pixelToBeDrawn = if(
+                controlRegister.getSpriteEnabled() &&
+                pixelSprite != null &&
+                pixelSprite.colorId != ColorID.ZERO &&
+                // Background over object check
+                (!pixelSprite.backgroundPriority ||
+                pixelBackground.colorId == ColorID.ZERO) // Sprites gets drawn over Zero color background no matter the priority
+                ) {
+                // Render a sprite pixel
+                // Check the object palette
+                val obpAddress = if(pixelSprite.palette == 0) 0xFF48u else 0xFF49u
+                applyPaletteColorToPixel(pixelSprite, obpAddress.toUShort())
                 pixelSprite
             } else if(controlRegister.getBgAndWindowEnabled()) {
+                // Render a background or window pixel
+                // Check background palette
+                applyPaletteColorToPixel(pixelBackground, 0xFF47u)
                 pixelBackground
             } else {
-                Pixel(ColorID.ZERO, 0, false)
+                Pixel(ColorID.ZERO, 0, 0, false)
             }
             currentLinePixels.add(pixelToBeDrawn)
         }
@@ -167,6 +212,20 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = currentLinePixels.size)
     }
 
+    private fun applyPaletteColorToPixel(pixel: Pixel, paletteAddress: UShort) {
+        val palette = memory.get(paletteAddress)
+        val colorValue = getColorValueFromPixel(pixel, palette)
+        pixel.colorValue = colorValue.toInt()
+    }
+    private fun getColorValueFromPixel(pixel: Pixel, palette: UByte): UInt {
+        return when(pixel.colorId) {
+            ColorID.ZERO -> (palette and 0b0000_0011u).toUInt()
+            ColorID.ONE -> (palette and 0b0000_1100u).toUInt() shr 2
+            ColorID.TWO -> (palette and 0b0011_0000u).toUInt() shr 4
+            ColorID.THREE -> (palette and 0b1100_0000u).toUInt() shr 6
+        }
+    }
+
     // TODO the next three functions are duplicates from PixelFetcher
     private fun getSpriteTileAddress(sprite: Object): UShort {
         // Each tile takes 16 bytes of memory
@@ -178,8 +237,8 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         return memory.get((tileAddress + 2u * lineSprite).toUShort(), isGPU = true)
     }
 
-    private fun getSpritePixels(tileLowData: UByte, tileHighDate: UByte): Array<Pixel> {
-        val pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, false) }
+    private fun getSpritePixels(tileLowData: UByte, tileHighDate: UByte, backgroundPriority: Boolean, palette: Int): Array<Pixel> {
+        val pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, 0, false) }
         for (x in 0..7) {
             // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
             val first = if (tileHighDate and (1u shl (7 - x)).toUByte() >= 1u) {
@@ -201,7 +260,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                 0x11u -> ColorID.THREE
                 else -> throw Exception("Invalid color ID: ${first + second}")
             }
-            pixelRow[x] = Pixel(colorID, 0, false)
+            pixelRow[x] = Pixel(colorID, 0, palette, backgroundPriority)
         }
         return pixelRow
     }
@@ -219,6 +278,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             is State.DrawPixels -> stat.or(0b11u) //Bit 1-0: 11
             is State.HorizontalBlank -> stat.or(0b00u) //Bit 1-0: 00
             is State.VerticalBlank -> stat.or(0b01u) //Bit 1-0: 01
+            is State.Disabled -> throw Exception("State Mode set while PPU is disabled")
         }
         memory.set(0xFF41u, newStat, isGPU = true)
     }
@@ -334,20 +394,6 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         return OAM
     }
 
-    fun generateTiles(): Array<Tile> {
-        val result = mutableListOf<Tile>()
-        // Every tile needs 16 bytes with the tile ID being the index
-        for((tileId, tileAddress) in (0x8000u..0x97FFu step 16).withIndex()) {
-            val data = mutableListOf<Array<UByte>>()
-            // A tile is composed of 8 lines of 2 bytes
-            for (i in 0u..15u step 2) {
-                data.add(arrayOf(memory.get((tileAddress + i).toUShort(), isGPU = true), memory.get((tileAddress + i + 1u).toUShort(), isGPU = true)))
-            }
-            result.add(Tile(data.toTypedArray(), tileId))
-        }
-        tiles = result.toTypedArray()
-        return tiles
-    }
 
 }
 
@@ -361,7 +407,7 @@ data class Object(val yPos: Int, val xPos: Int, val tileIndex:UByte, val attribu
            // Sprite is visible
            if(attributesFlags and 0b0100_0000u >= 1u) {
                // Flip vertically
-               return spriteSize - (ly - yPos + 16)
+               return (spriteSize - 1) - (ly - yPos + 16)
            }
            return ly - yPos + 16
        }
@@ -387,59 +433,12 @@ data class Object(val yPos: Int, val xPos: Int, val tileIndex:UByte, val attribu
          }
      }
 }
-// 8x8 pixel, 2 bytes per row, 16 bytes total
-class Tile(val pixelsData: Array<Array<UByte>>, private val id:Int) {
 
-    val pixels: Array<Array<Pixel>>
-
-    init {
-        val pixels = Array(8) {Array(8) { Pixel(ColorID.ZERO, 0, false) } }
-        for (x in 0..7) {
-            for (y in 0..7) {
-                // TODO handle palette and background priority
-                pixels[x][y] = Pixel(getColorId(x,y), 0, false)
-            }
-        }
-        this.pixels = pixels
-    }
-
-    fun getTileId(`8800AddressMode`: Boolean): Int {
-        return if(!`8800AddressMode` || (id in 128..255)) {
-            id
-        } else {
-            return id - 256
-        }
-    }
-
-    private fun getColorId(x: Int, y: Int):ColorID {
-        // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
-        val first = if (pixelsData[x][1] and (1u shl (7 - y)).toUByte() > 1u) {
-            0x10u
-        } else {
-            0u
-        }
-
-        val second = if (pixelsData[x][0] and (1u shl (7 - y)).toUByte() > 1u) {
-            0x1u
-        } else {
-            0u
-        }
-
-        return when(first + second) {
-            0x00u -> ColorID.ZERO
-            0x01u -> ColorID.ONE
-            0x10u -> ColorID.TWO
-            0x11u -> ColorID.THREE
-            else -> throw Exception("Invalid color ID: ${first + second}")
-        }
-    }
-}
 enum class ColorID {
     ZERO, ONE, TWO, THREE;
 }
 
-data class Pixel(val colorId: ColorID, val palette: Int, val backgroundPriority:Boolean) {
+data class Pixel(val colorId: ColorID, var colorValue: Int = 0, val palette: Int, val backgroundPriority:Boolean) {
 
 }
 
-class Palette(colors: Array<Int>)

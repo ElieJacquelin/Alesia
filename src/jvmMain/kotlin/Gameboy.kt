@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.graphics.drawscope.scale
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
@@ -21,6 +23,8 @@ fun Gameboy(alesia: Alesia) {
     bitmap.installPixels(info, frame, info.minRowBytes)
 
     Canvas(modifier = Modifier.wrapContentSize()) {
-        drawImage(bitmap.asComposeImageBitmap())
+        scale(2f) {
+            drawImage(bitmap.asComposeImageBitmap(), filterQuality = FilterQuality.None) // FilterQuality.None allows pixel-perfect scaling with no antialiasing
+        }
     }
 }

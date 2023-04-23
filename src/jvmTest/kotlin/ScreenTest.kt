@@ -27,83 +27,6 @@ internal class ScreenTest {
         }
     }
 
-
-    @Test
-    fun `Get first tile data - 8000 method`() {
-        // Given a tile has been stored on the first ID
-        storeTile(0x8000u)
-        // When tiles are generated
-        screen.generateTiles()
-
-        validateSprite(0, false)
-    }
-
-    @Test
-    fun `Get last tile data - 8000 method`() {
-        // Given a tile has been stored on the last ID
-        storeTile(0x8FF0u)
-        // When tiles are generated
-        screen.generateTiles()
-
-        validateSprite(255, false)
-    }
-
-    @Test
-    fun `Get first tile data - 8800 method`() {
-        // Given a tile has been stored on the first ID
-        storeTile(0x9000u)
-        // When tiles are generated
-        screen.generateTiles()
-
-        validateSprite(0, true)
-    }
-
-    @Test
-    fun `Get last tile data - 8800 method`() {
-        // Given a tile has been stored on the last ID
-        storeTile(0x8FF0u)
-        // When tiles are generated
-        screen.generateTiles()
-
-        validateSprite(255, true)
-    }
-
-    @Test
-    fun `Get last tile data - 8800 method - lower boundary`() {
-        // Given a tile has been stored before the boundary
-        storeTile(0x97F0u)
-        // When tiles are generated
-        screen.generateTiles()
-
-        validateSprite(127, true)
-    }
-
-    @Test
-    fun `Get last tile data - 8800 method - higher boundary`() {
-        // Given a tile has been stored after the boundary
-        storeTile(0x8800u)
-        // When tiles are generated
-        screen.generateTiles()
-
-        validateSprite(128, true)
-    }
-
-    private fun validateSprite(tileId: Int, `8800AddressMode`: Boolean) {
-        //Then only one sprite has the ID
-        assertEquals(1, screen.tiles.filter { tile -> tile.getTileId(`8800AddressMode`) == tileId }.size)
-        val lastTile = screen.tiles.find { tile -> tile.getTileId(`8800AddressMode`) == tileId }!!
-        // That sprite has 8 rows
-        assertEquals(8, lastTile.pixelsData.size)
-        // of 2 bytes each
-        assertEquals(2, lastTile.pixelsData[0].size)
-        // And all values are set accordingly
-        for (row in lastTile.pixelsData) {
-            for (pixel in row) {
-                assertEquals(0xFFu, pixel)
-            }
-        }
-    }
-
     private fun buildSharedState(
         currentLineDotCount: Int = 0,
         currentLine: Int = 0,
@@ -178,7 +101,7 @@ internal class ScreenTest {
     @Test
     fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - last line`() {
         // Given the first sprite is at position 1
-        val sprite = Object(1, 0, 0xFFu, 0xFFu, 0xFE00u)
+        val sprite = Object(1, 0, 0xFAu, 0xFFu, 0xFE00u)
         Object.storeObjectInMemory(sprite, memory)
         // And the sprite size is set to 16x16
         lcdControlRegister.setSpriteSizeEnabled(true)
@@ -216,7 +139,7 @@ internal class ScreenTest {
     @Test
     fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - first line`() {
         // Given the first sprite is at position 16
-        val sprite = Object(16, 0, 0xFFu, 0xFFu, 0xFE00u)
+        val sprite = Object(16, 0, 0xFAu, 0xFFu, 0xFE00u)
         Object.storeObjectInMemory(sprite, memory)
         // And the sprite size is set to 16x16
         lcdControlRegister.setSpriteSizeEnabled(true)
@@ -235,7 +158,7 @@ internal class ScreenTest {
     @Test
     fun `OAM Scan finds sprite in the current line - Within scanline 16x8 - first line`() {
         // Given the first sprite is at position 16
-        val sprite = Object(16, 0, 0xFFu, 0xFFu, 0xFE00u)
+        val sprite = Object(16, 0, 0xFAu, 0xFFu, 0xFE00u)
         Object.storeObjectInMemory(sprite, memory)
         // And the sprite size is set to 16x8
         lcdControlRegister.setSpriteSizeEnabled(false)
@@ -270,7 +193,7 @@ internal class ScreenTest {
     @Test
     fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - multiple sprite`() {
         // Given the first sprite is at position 1
-        val sprite = Object(1, 0, 0xFFu, 0xFFu, 0xFE00u)
+        val sprite = Object(1, 0, 0xFCu, 0xFFu, 0xFE00u)
         Object.storeObjectInMemory(sprite, memory)
         // Given the second sprite is at position 10
         val sprite2 = Object(10, 0, 0xFAu, 0xFFu, 0xFE04u)
@@ -294,7 +217,7 @@ internal class ScreenTest {
         // Given 11 sprites are in the same line and next to each other on the X line
         val sprites = mutableListOf<Object>()
         for (i in 0..10) {
-            val sprite = Object(1, i, 0xFFu, 0xFFu, (0xFE00u + (0x4u * i.toUInt())).toUShort())
+            val sprite = Object(1, i, 0xFAu, 0xFFu, (0xFE00u + (0x4u * i.toUInt())).toUShort())
             Object.storeObjectInMemory(sprite, memory)
             sprites.add(sprite)
         }
@@ -312,6 +235,30 @@ internal class ScreenTest {
 
         // Then 10 sprites are in the list as the furthest one is being dismissed
         assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = sprites), screen.state)
+    }
+
+    @Test
+    fun `OAM Scan finds sprite in the current line - Within scanline 16x16 - First bit of tile index is ignored`() {
+        // Given the first sprite is at position 1 but with the first bit of the tile index being set
+        val sprite = Object(1, 0, 0xFFu, 0xFFu, 0xFE00u)
+        Object.storeObjectInMemory(sprite, memory)
+        // Given the second sprite is at position 10
+        val sprite2 = Object(10, 0, 0xFAu, 0xFFu, 0xFE04u)
+        Object.storeObjectInMemory(sprite2, memory)
+        // And the sprite size is set to 16x16
+        lcdControlRegister.setSpriteSizeEnabled(true)
+        // And the current scanline is 0
+        // And the current state is OAM Scan for the very first dot
+        val sharedState = buildSharedState(currentLine = 0, currentLineDotCount = 0)
+        screen.state = Screen.State.OAMScan(sharedState)
+
+        // When a new dot is being processed
+        screen.tick()
+
+        // Then both sprites are in the list and the first sprite is using tile index 0xFE instead of 0xFF
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(
+            Object.ObjectFromMemoryAddress(0xFE00u, memory).copy(tileIndex = 0xFEu), Object.ObjectFromMemoryAddress(0xFE04u, memory))), screen.state)
+
     }
 
     @Test
@@ -389,7 +336,7 @@ internal class ScreenTest {
         // And the fifo is not empty
         // And the pixel fetch is not reset
         val backgroundFifo = ArrayDeque<Pixel>()
-        backgroundFifo.add(Pixel(ColorID.TWO, 0, false))
+        backgroundFifo.add(Pixel(ColorID.TWO, 0, 0, false))
         val pixelFetcher: PixelFetcher = mockk()
         every { pixelFetcher.reset(any(), any()) } just Runs
         every { pixelFetcher.tick() } just Runs
@@ -414,8 +361,10 @@ internal class ScreenTest {
     fun `DrawPixels empties fifo one pixel at a time`() {
         // Given the fifo is not empty
         val backgroundFifo = ArrayDeque<Pixel>()
-        backgroundFifo.add(Pixel(ColorID.ONE, 0, false))
-        backgroundFifo.add(Pixel(ColorID.TWO, 0, false))
+        backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        backgroundFifo.add(Pixel(ColorID.TWO, 0, 0, false))
+        // And the background palette is set to use 0 color value on every color
+        memory.set(0xFF47u, 0u)
 
         val pixelFetcher: PixelFetcher = mockk()
         every { pixelFetcher.reset(any(), any()) } just Runs
@@ -424,7 +373,7 @@ internal class ScreenTest {
         // And the pixels for the current line is not empty
         val currentLine = 12
         val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
-        frame[currentLine].add(Pixel(ColorID.THREE, 0, false))
+        frame[currentLine].add(Pixel(ColorID.THREE, 0, 0, false))
 
         // And the current dot count is not 80
         val originalSharedState = buildSharedState(currentLineDotCount = 90, frame = frame, currentLine=currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
@@ -436,12 +385,12 @@ internal class ScreenTest {
 
         // Then the background fifo has lost its first pixel
         assertEquals(1, backgroundFifo.size)
-        assertEquals(Pixel(ColorID.TWO, 0, false), backgroundFifo[0])
+        assertEquals(Pixel(ColorID.TWO, 0, 0, false), backgroundFifo[0])
 
         // And the pixel removed is added to the frame at the current line
         assertEquals(2, frame[currentLine].size)
-        assertEquals(Pixel(ColorID.THREE, 0, false), frame[currentLine][0]) // Existing pixel
-        assertEquals(Pixel(ColorID.ONE, 0, false), frame[currentLine][1]) // New pixel
+        assertEquals(Pixel(ColorID.THREE, 0, 0, false), frame[currentLine][0]) // Existing pixel
+        assertEquals(Pixel(ColorID.ONE, 0, 0, false), frame[currentLine][1]) // New pixel
 
         // And the state remains on DrawPixels for the next X
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 91)
@@ -449,11 +398,44 @@ internal class ScreenTest {
     }
 
     @Test
+    fun `DrawPixels empties fifo one pixel at a time - BG Palette`() {
+        // Given the fifo is not empty
+        val backgroundFifo = ArrayDeque<Pixel>()
+        backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        backgroundFifo.add(Pixel(ColorID.TWO, 0, 0, false))
+        // And the background palette is set to use different colors
+        memory.set(0xFF47u, 0b0011_0100u) // Value 3 for ID.TWO and value 1 for ID.ONE
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+
+        // And the pixels for the current line is not empty
+        val currentLine = 12
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+        frame[currentLine].add(Pixel(ColorID.THREE, 0, 0, false))
+
+        // And the current dot count is not 80
+        val originalSharedState = buildSharedState(currentLineDotCount = 90, frame = frame, currentLine=currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 1)
+
+        // When the machine ticks twice
+        screen.tick()
+        screen.tick()
+
+        // Then the pixel removed is added to the frame at the current line
+        assertEquals(3, frame[currentLine].size)
+        assertEquals(Pixel(ColorID.THREE, 0, 0, false), frame[currentLine][0]) // Existing pixel
+        assertEquals(Pixel(ColorID.ONE, 1, 0, false), frame[currentLine][1]) // New pixel
+        assertEquals(Pixel(ColorID.TWO, 3, 0, false), frame[currentLine][2]) // New pixel
+    }
+
+    @Test
     fun `DrawPixels empties fifo one pixel at a time - BG disabled`() {
         // Given the fifo is not empty
         val backgroundFifo = ArrayDeque<Pixel>()
-        backgroundFifo.add(Pixel(ColorID.ONE, 0, false))
-        backgroundFifo.add(Pixel(ColorID.TWO, 0, false))
+        backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        backgroundFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         val pixelFetcher: PixelFetcher = mockk()
         every { pixelFetcher.reset(any(), any()) } just Runs
@@ -462,7 +444,7 @@ internal class ScreenTest {
         // And the pixels for the current line is not empty
         val currentLine = 12
         val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
-        frame[currentLine].add(Pixel(ColorID.THREE, 0, false))
+        frame[currentLine].add(Pixel(ColorID.THREE, 0, 0, false))
 
         // And the current dot count is not 80
         val originalSharedState = buildSharedState(currentLineDotCount = 90, frame = frame, currentLine=currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
@@ -477,12 +459,12 @@ internal class ScreenTest {
 
         // Then the background fifo has lost its first pixel
         assertEquals(1, backgroundFifo.size)
-        assertEquals(Pixel(ColorID.TWO, 0, false), backgroundFifo[0])
+        assertEquals(Pixel(ColorID.TWO, 0, 0, false), backgroundFifo[0])
 
         // And the fifo gets a empty pixel due to background being disabled
         assertEquals(2, frame[currentLine].size)
-        assertEquals(Pixel(ColorID.THREE, 0, false), frame[currentLine][0]) // Existing pixel
-        assertEquals(Pixel(ColorID.ZERO, 0, false), frame[currentLine][1]) // New pixel
+        assertEquals(Pixel(ColorID.THREE, 0, 0, false), frame[currentLine][0]) // Existing pixel
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), frame[currentLine][1]) // New pixel
 
         // And the state remains on DrawPixels for the next X
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 91)
@@ -499,7 +481,7 @@ internal class ScreenTest {
         val currentLine = 12
         val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
         for (i in 0..158) {
-            frame[currentLine].add(Pixel(ColorID.THREE, 0, false))
+            frame[currentLine].add(Pixel(ColorID.THREE, 0, 0, false))
         }
         // And no sprites should be drawn
 
@@ -528,11 +510,11 @@ internal class ScreenTest {
         val currentLine = 12
         val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
         for (i in 0..158) {
-            frame[currentLine].add(Pixel(ColorID.THREE, 0, false))
+            frame[currentLine].add(Pixel(ColorID.THREE, 0, 0, false))
         }
         // And the fifo has a pixel available
         val backgroundFifo = ArrayDeque<Pixel>()
-        backgroundFifo.add(Pixel(ColorID.ONE, 0, false))
+        backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo)
 
@@ -597,7 +579,7 @@ internal class ScreenTest {
 
         // And the background fifo is not empty
         val backgroundFifo = ArrayDeque<Pixel>()
-        backgroundFifo.add(Pixel(ColorID.ONE, 0, false))
+        backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
 
         // And we are at line 20 at position 0
         val currentLine = 20
@@ -653,14 +635,14 @@ internal class ScreenTest {
         // Then the sprite data is added to the object fifo in order
         val expectedObjectFifo = ArrayDeque<Pixel>()
 
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
         val expectedSpriteList = emptyList<Object>()
@@ -703,14 +685,14 @@ internal class ScreenTest {
         // Then the sprite data is added to the object fifo in reverse order due to horizontal flip
         val expectedObjectFifo = ArrayDeque<Pixel>()
 
-        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
 
         // And the sprite is removed from the list
         val expectedSpriteList = emptyList<Object>()
@@ -731,8 +713,8 @@ internal class ScreenTest {
         // With the vertical bit set
         val sprite = Object(36, 8, 0xFFu, 0b0100_0000u, 0xFFFFu)
         //With data for the last line: low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
-        memory.set(0x9000u, 0x06u)
-        memory.set(0x9001u, 0x03u)
+        memory.set(0x8FFEu, 0x06u)
+        memory.set(0x8FFFu, 0x03u)
         // And sprites are enabled
         lcdControlRegister.setSpriteEnabled(true)
 
@@ -753,14 +735,14 @@ internal class ScreenTest {
         // Then the sprite data is added to the object fifo
         val expectedObjectFifo = ArrayDeque<Pixel>()
 
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
         val expectedSpriteList = emptyList<Object>()
@@ -792,7 +774,7 @@ internal class ScreenTest {
         // And the object fifo is not empty for the first 7 pixels
         val objectFifo = ArrayDeque<Pixel>()
         for (i in 0..6) {
-            objectFifo.add(Pixel(ColorID.ONE, 0, false))
+            objectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
         }
 
         // And the sprite is ready to be read
@@ -808,14 +790,14 @@ internal class ScreenTest {
         // Then the sprite data not added as the sprite fifo is not empty except the last pixel
         val expectedObjectFifo = ArrayDeque<Pixel>()
 
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
         val expectedSpriteList = emptyList<Object>()
@@ -863,14 +845,14 @@ internal class ScreenTest {
         // Except for transparent pixel which are replaced by sprite 2
         val expectedObjectFifo = ArrayDeque<Pixel>()
 
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, false))
-        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.THREE, 0, 0, false))
+        expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
         val expectedSpriteList = emptyList<Object>()
@@ -897,15 +879,19 @@ internal class ScreenTest {
         // And there is 8 non-transparent pixels in the background fifo
         val backgroundFifo = ArrayDeque<Pixel>()
         for (i in 0..7) {
-            backgroundFifo.add(Pixel(ColorID.ONE, 0, false))
+            backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
         }
 
         // And there is 7 non-transparent pixels and 1 transparent pixel in the sprite fifo
         val objectFifo = ArrayDeque<Pixel>()
         for (i in 0..7) {
-            objectFifo.add(Pixel(ColorID.TWO, 0, false))
+            objectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
         }
-        objectFifo[4] = Pixel(ColorID.ZERO, 0, false)
+        objectFifo[4] = Pixel(ColorID.ZERO, 0, 0, false)
+        // And both background and sprite palettes are set to always returns 0
+        memory.set(0xFF47u, 0u)
+        memory.set(0xFF48u, 0u)
+        memory.set(0xFF49u, 0u)
 
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo, objectFifo = objectFifo)
@@ -918,18 +904,120 @@ internal class ScreenTest {
         }
 
         // Then the sprite pixels has priority except for the transparent pixel which should be replaced by the background
-        assertEquals(frame[0][0], Pixel(ColorID.TWO, 0 , false))
-        assertEquals(frame[0][1], Pixel(ColorID.TWO, 0 , false))
-        assertEquals(frame[0][2], Pixel(ColorID.TWO, 0 , false))
-        assertEquals(frame[0][3], Pixel(ColorID.TWO, 0 , false))
-        assertEquals(frame[0][4], Pixel(ColorID.ONE, 0 , false))
-        assertEquals(frame[0][5], Pixel(ColorID.TWO, 0 , false))
-        assertEquals(frame[0][6], Pixel(ColorID.TWO, 0 , false))
-        assertEquals(frame[0][7], Pixel(ColorID.TWO, 0 , false))
+        assertEquals(frame[0][0], Pixel(ColorID.TWO, 0, 0 , false))
+        assertEquals(frame[0][1], Pixel(ColorID.TWO, 0, 0 , false))
+        assertEquals(frame[0][2], Pixel(ColorID.TWO, 0, 0 , false))
+        assertEquals(frame[0][3], Pixel(ColorID.TWO, 0, 0 , false))
+        assertEquals(frame[0][4], Pixel(ColorID.ONE, 0, 0 , false))
+        assertEquals(frame[0][5], Pixel(ColorID.TWO, 0, 0 , false))
+        assertEquals(frame[0][6], Pixel(ColorID.TWO, 0, 0 , false))
+        assertEquals(frame[0][7], Pixel(ColorID.TWO, 0, 0 , false))
 
 
         // And the state remains on DrawPixels for the next X
         assertEquals( Screen.State.DrawPixels(originalSharedState.copy(currentLineDotCount = 8), spritesOnTheCurrentLine = emptyList(), currentXScanLine = 8), screen.state)
+    }
+
+    @Test
+    fun `DrawPixels applies sprite palette 0`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And we are at line 0 at position 0
+        val currentLine = 0
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+        // And there is 8 non-transparent pixels in the background fifo
+        val backgroundFifo = ArrayDeque<Pixel>()
+        for (i in 0..7) {
+            backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        }
+
+        // And there is 8 non-transparent pixels with different color
+        val objectFifo = ArrayDeque<Pixel>()
+        for (i in 0..7) {
+            objectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
+        }
+        objectFifo[5] = Pixel(ColorID.THREE, 0, 0, false)
+        objectFifo[6] = Pixel(ColorID.ONE, 0, 0, false)
+        // And the sprite palette 0 is set for different colors
+        memory.set(0xFF48u, 0b0110_1100u) // ZERO => 0, ONE => 3, TWO => 2, THREE = 1
+
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo, objectFifo = objectFifo)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+
+        // When the machine ticks 8 times
+        for (i in 0..7) {
+            screen.tick()
+        }
+
+        // Then the sprite pixels have the right color value
+        assertEquals(frame[0][0], Pixel(ColorID.TWO, 2, 0 , false))
+        assertEquals(frame[0][1], Pixel(ColorID.TWO, 2, 0 , false))
+        assertEquals(frame[0][2], Pixel(ColorID.TWO, 2, 0 , false))
+        assertEquals(frame[0][3], Pixel(ColorID.TWO, 2, 0 , false))
+        assertEquals(frame[0][4], Pixel(ColorID.TWO, 2, 0 , false))
+        assertEquals(frame[0][5], Pixel(ColorID.THREE, 1, 0 , false))
+        assertEquals(frame[0][6], Pixel(ColorID.ONE, 3, 0 , false))
+        assertEquals(frame[0][7], Pixel(ColorID.TWO, 2, 0 , false))
+    }
+
+    @Test
+    fun `DrawPixels applies sprite palette 1`() {
+        val pixelFetcher: PixelFetcher = mockk()
+        every { pixelFetcher.reset(any(), any()) } just Runs
+        every { pixelFetcher.tick() } just Runs
+        every { pixelFetcher.state } returns PixelFetcher.State.GetTile(PixelFetcher.SharedState(0u, 0, ArrayDeque()), 0)
+
+        // Given sprites are enabled
+        lcdControlRegister.setSpriteEnabled(true)
+
+        // And we are at line 0 at position 0
+        val currentLine = 0
+        val frame: List<ArrayList<Pixel>> = List(160) { ArrayList() }
+
+        // And there is 8 non-transparent pixels in the background fifo
+        val backgroundFifo = ArrayDeque<Pixel>()
+        for (i in 0..7) {
+            backgroundFifo.add(Pixel(ColorID.ONE, 0, 0, false))
+        }
+
+        // And there is 8 non-transparent pixels with different color for palette 1
+        val objectFifo = ArrayDeque<Pixel>()
+        for (i in 0..7) {
+            objectFifo.add(Pixel(ColorID.TWO, 0, 1, false))
+        }
+        objectFifo[5] = Pixel(ColorID.THREE, 0, 1, false)
+        objectFifo[6] = Pixel(ColorID.ONE, 0, 1, false)
+        // And the sprite palette 1 is set for different colors
+        memory.set(0xFF49u, 0b0110_1100u) // ZERO => 0, ONE => 3, TWO => 2, THREE = 1
+
+
+        val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo, objectFifo = objectFifo)
+
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+
+        // When the machine ticks 8 times
+        for (i in 0..7) {
+            screen.tick()
+        }
+
+        // Then the sprite pixels have the right color value
+        assertEquals(frame[0][0], Pixel(ColorID.TWO, 2, 1 , false))
+        assertEquals(frame[0][1], Pixel(ColorID.TWO, 2, 1 , false))
+        assertEquals(frame[0][2], Pixel(ColorID.TWO, 2, 1 , false))
+        assertEquals(frame[0][3], Pixel(ColorID.TWO, 2, 1 , false))
+        assertEquals(frame[0][4], Pixel(ColorID.TWO, 2, 1 , false))
+        assertEquals(frame[0][5], Pixel(ColorID.THREE, 1, 1 , false))
+        assertEquals(frame[0][6], Pixel(ColorID.ONE, 3, 1 , false))
+        assertEquals(frame[0][7], Pixel(ColorID.TWO, 2, 1 , false))
     }
 
     @Test
@@ -1032,7 +1120,7 @@ internal class ScreenTest {
     fun `VBlank goes to new frame once line dot count is 456 and last line is drawn`() {
         // Given the current state is VBlank with 456 line dot count and the current line is 153
         // And the frame buffer is not empty
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 153, frame = List(160) { arrayListOf(Pixel(ColorID.ZERO, 0 , false)) })
+        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 153, frame = List(160) { arrayListOf(Pixel(ColorID.ZERO, 0, 0 , false)) })
         screen.state = Screen.State.VerticalBlank(originalSharedState)
 
         // When a new dot is being processed
@@ -1196,5 +1284,36 @@ internal class ScreenTest {
 
         // Then the stat interrupt is not set
         assertEquals(0b0000_0000u, memory.get(0xFF0Fu))
+    }
+
+    @Test
+    fun `Disable PPU`() {
+        // Given the screen is on any state
+        val originalSharedState = buildSharedState()
+        screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
+        // And the disable LCD bit is set
+        lcdControlRegister.setDisplay(false)
+
+        // When the machine ticks
+        screen.tick()
+
+        // Then the state is set to disabled
+        assertEquals(Screen.State.Disabled(originalSharedState), screen.state)
+    }
+
+    @Test
+    fun `Enable PPU`() {
+        // Given the screen is disabled
+        val originalSharedState = buildSharedState()
+        screen.state = Screen.State.Disabled(originalSharedState)
+        // And the disable LCD bit is reset
+        lcdControlRegister.setDisplay(true)
+
+        // When the machine ticks
+        screen.tick()
+
+        // Then the state is reset
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 1, currentLine = 0, frame = List(160) { ArrayList() })
+        assertEquals(Screen.State.OAMScan(expectedSharedState), screen.state)
     }
 }

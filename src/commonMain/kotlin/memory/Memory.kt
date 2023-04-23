@@ -152,6 +152,9 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
             0x01u, 0x02u, 0x03u -> {
                 MBC1( rom, ramSize)
             }
+            0x11u, 0x12u, 0x13u -> {
+                MBC3( rom, ramSize)
+            }
             else -> throw Exception("Unsupported MBC")
         }
     }

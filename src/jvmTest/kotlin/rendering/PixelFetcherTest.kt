@@ -23,8 +23,8 @@ class PixelFetcherTest {
         pixelFetcher = PixelFetcher(lcdControlRegister, memory)
     }
 
-    private fun buildSharedState(currentTileMapOffset: UInt = 0u, currentLine: Int = 0, backgroundFifo: ArrayDeque<Pixel> = ArrayDeque()): PixelFetcher.SharedState {
-        return PixelFetcher.SharedState(currentTileMapOffset, currentLine, backgroundFifo)
+    private fun buildSharedState(currentTileMapOffset: UInt = 0u, currentLine: Int = 0, backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), internalLineCounter: UInt = 0u, hasDrawnWindowThisLine: Boolean = false): PixelFetcher.SharedState {
+        return PixelFetcher.SharedState(currentTileMapOffset, currentLine, backgroundFifo, internalWindowLineCounter = internalLineCounter, hasDrawnWindowThisLine = hasDrawnWindowThisLine)
     }
 
     @Test
@@ -184,18 +184,44 @@ class PixelFetcherTest {
         lcdControlRegister.setWindowEnabled(true)
         // AND the BG tile map is set to 0x9800
         lcdControlRegister.setWindowTileMap(false)
-        // AND the windowX is set to 11
-        val windowX = memory.set(0xFF4Bu, 11u)
+        // AND the windowX is set to 19
+        memory.set(0xFF4Bu, 19u)
         // AND the window Y is set to 16
-        val windowY = memory.set(0xFF4Au, 16u)
-        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) + 0x20 * ((currentLine - WinY) / 8)
-        memory.set(0x9800u, 0x02u)
+        memory.set(0xFF4Au, 16u)
+        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) / 8 + 0x20 * (Internal line counter / 8)
+        memory.set(0x9803u, 0x02u)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID from the Window
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        // AND the has drawn window this line flag is set
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Window - Internal line counter`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 16th line and 4th tile
+        // AND the internal line counter is set to 10
+        val sharedState = buildSharedState(currentLine = 16, currentTileMapOffset = 4u, internalLineCounter = 10u)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the window is enabled
+        lcdControlRegister.setWindowEnabled(true)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setWindowTileMap(false)
+        // AND the windowX is set to 19
+        memory.set(0xFF4Bu, 19u)
+        // AND the window Y is set to 16
+        memory.set(0xFF4Au, 16u)
+        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) / 8 + 0x20 * (Internal line counter / 8)
+        memory.set(0x9823u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID from the Window
+        // AND the has drawn window this line flag is set
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -211,14 +237,14 @@ class PixelFetcherTest {
         val windowX = memory.set(0xFF4Bu, 11u)
         // AND the window Y is set to 16
         val windowY = memory.set(0xFF4Au, 16u)
-        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) + 0x20 * ((currentLine - WinY) / 8)
-        memory.set(0x9800u, 0x02u)
+        // AND the window tile ID to be fetched is set to 2 (0x9800 + (WinX - 7) / 8 + 0x20 * (Internal line counter / 8)
+        memory.set(0x9804u, 0x02u)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID from the Window
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -423,7 +449,7 @@ class PixelFetcherTest {
         // AND the tile data is set
         memory.set(0x8021u, 0x01u)
         // AND the Fifo is not empty
-        sharedState.backgroundFiFo.add(Pixel(ColorID.ZERO, 0 , false))
+        sharedState.backgroundFiFo.add(Pixel(ColorID.ZERO, 0, 0 , false))
         // AND the PixelFetcher is on the tile data high step on the second dot
         pixelFetcher.state = PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0x03u, 1)
 
@@ -440,7 +466,7 @@ class PixelFetcherTest {
         val sharedState = buildSharedState()
         pixelFetcher.state = PixelFetcher.State.Push(sharedState,0x02u, 0x03u)
         // AND the Fifo is not empty
-        sharedState.backgroundFiFo.add(Pixel(ColorID.ZERO, 0 , false))
+        sharedState.backgroundFiFo.add(Pixel(ColorID.ZERO, 0, 0 , false))
 
         // WHEN the machine ticks
         pixelFetcher.tick()
@@ -463,14 +489,14 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the pixels are pushed to the background Fifo in the expected order
-        assertEquals(Pixel(ColorID.ZERO, 0, false), backgroundFifo.removeFirst())
-        assertEquals(Pixel(ColorID.ZERO, 0, false), backgroundFifo.removeFirst())
-        assertEquals(Pixel(ColorID.ZERO, 0, false), backgroundFifo.removeFirst())
-        assertEquals(Pixel(ColorID.ZERO, 0, false), backgroundFifo.removeFirst())
-        assertEquals(Pixel(ColorID.ZERO, 0, false), backgroundFifo.removeFirst())
-        assertEquals(Pixel(ColorID.ONE, 0, false), backgroundFifo.removeFirst())
-        assertEquals(Pixel(ColorID.THREE, 0, false), backgroundFifo.removeFirst())
-        assertEquals(Pixel(ColorID.TWO, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ONE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.THREE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.TWO, 0, 0, false), backgroundFifo.removeFirst())
         assertEquals(0, backgroundFifo.size)
 
         // AND the state is set to get Tile for the next tile
@@ -490,7 +516,41 @@ class PixelFetcherTest {
         pixelFetcher.reset(newLine, newBackgroundFifo)
 
         // THEN the state is set to GetTile for the new line
-        val expectedSharedState = buildSharedState(0u, newLine, newBackgroundFifo)
+        val expectedSharedState = buildSharedState(0u, newLine, newBackgroundFifo, internalLineCounter = 0u, hasDrawnWindowThisLine = false)
+        assertEquals(PixelFetcher.State.GetTile(expectedSharedState, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `reset() increments internal window counter if has drawn`() {
+        // GIVEN the has drawn window flag is set and the line counter is 10
+        val sharedState = buildSharedState(internalLineCounter = 10u, hasDrawnWindowThisLine = true)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u)
+
+        // WHEN the reset function is called
+        val newLine = 12
+        val newBackgroundFifo = ArrayDeque<Pixel>()
+        pixelFetcher.reset(newLine, newBackgroundFifo)
+
+        // THEN the internal window line counter has incremented
+        // And the has drawn window flag is reset
+        val expectedSharedState = buildSharedState(0u, newLine, newBackgroundFifo, internalLineCounter = 11u, hasDrawnWindowThisLine = false)
+        assertEquals(PixelFetcher.State.GetTile(expectedSharedState, 0), pixelFetcher.state)
+    }
+
+    @Test
+    fun `reset() ignores internal window counter if has not drawn`() {
+        // GIVEN the has drawn window flag is not set and the line counter is 10
+        val sharedState = buildSharedState(internalLineCounter = 10u, hasDrawnWindowThisLine = false)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u)
+
+        // WHEN the reset function is called
+        val newLine = 12
+        val newBackgroundFifo = ArrayDeque<Pixel>()
+        pixelFetcher.reset(newLine, newBackgroundFifo)
+
+        // THEN the internal window line counter has not changed
+        // And the has drawn window flag is not set
+        val expectedSharedState = buildSharedState(0u, newLine, newBackgroundFifo, internalLineCounter = 10u, hasDrawnWindowThisLine = false)
         assertEquals(PixelFetcher.State.GetTile(expectedSharedState, 0), pixelFetcher.state)
     }
 

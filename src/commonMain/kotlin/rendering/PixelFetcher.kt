@@ -8,18 +8,27 @@ import Pixel
 class PixelFetcher(private val controlRegister: LcdControlRegister, private val memory: Memory) {
 
     internal sealed class State {
-        data class GetTile(val sharedState: SharedState, val dotCount: Int = 0) : State()
-        data class GetTileDataLow(val sharedState: SharedState, val tileID: UByte, val dotCount: Int = 0): State()
-        data class GetTileDataHigh(val sharedState: SharedState, val tileID: UByte, val tileLowData: UByte, val dotCount: Int = 0): State()
-        data class Push(val sharedState: SharedState, val tileLowData: UByte, val tileHighData: UByte): State()
+        abstract val sharedState: SharedState
+        data class GetTile(override val sharedState: SharedState, val dotCount: Int = 0) : State()
+        data class GetTileDataLow(override val sharedState: SharedState, val tileID: UByte, val dotCount: Int = 0): State()
+        data class GetTileDataHigh(override val sharedState: SharedState, val tileID: UByte, val tileLowData: UByte, val dotCount: Int = 0): State()
+        data class Push(override val sharedState: SharedState, val tileLowData: UByte, val tileHighData: UByte): State()
     }
 
-    internal data class SharedState(val currentTileMapOffset: UInt, val currentLine: Int, val backgroundFiFo: ArrayDeque<Pixel>)
+    internal data class SharedState(val currentTileMapOffset: UInt, val currentLine: Int, val backgroundFiFo: ArrayDeque<Pixel>, val internalWindowLineCounter: UInt = 0u, val hasDrawnWindowThisLine: Boolean = false)
 
     internal lateinit var state: State
 
+    //Called at the beginning of every new line
     fun reset(lineNumber: Int, backgroundFiFo: ArrayDeque<Pixel>) {
-        state = State.GetTile(SharedState(0u, lineNumber, backgroundFiFo))
+        val internalWindowLineCounter = if (lineNumber == 0) {
+          0u // New frame we can reset
+        } else if(state.sharedState.hasDrawnWindowThisLine) { // During the last line some window tiles have been drawn, we can increment the internal counter
+            state.sharedState.internalWindowLineCounter + 1u
+        } else {
+            state.sharedState.internalWindowLineCounter // No windows tile has been drawn last line, the internal counter should pause
+        }
+        state = State.GetTile(SharedState(0u, lineNumber, backgroundFiFo, internalWindowLineCounter = internalWindowLineCounter, hasDrawnWindowThisLine = false))
     }
 
     fun tick() {
@@ -40,14 +49,15 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
                 val windowX = memory.get(0xFF4Bu)
                 val relativeWindowX = if(windowX > 7u) windowX - 7u else 0u
                 if(state.sharedState.currentLine.toUByte() >= windowY &&
-                    currentTileMapOffset >= relativeWindowX) {
+                    currentTileMapOffset * 8u >= relativeWindowX) { // currentTileMapOffset counts the numbers of tiles while windowX is the number of pixels
                     // The current pixel is in the window
                     val mapTile = if(controlRegister.getWindowTileMap()) 0x9C00u else 0x9800u
-                    val tileIDx = (currentTileMapOffset - relativeWindowX)
-                    val tileIDy = ((state.sharedState.currentLine.toUByte() - windowY) / 8u)
+                    val tileIDx = (currentTileMapOffset - (relativeWindowX / 8u))
+                    // The window uses an internal line counter so if the window is enabled -> Disabled -> Enabled in the same frame it will continue drawing from where it paused
+                    val tileIDy = (state.sharedState.internalWindowLineCounter / 8u)
                     val tileID = memory.get((mapTile + tileIDx + (0x20u * tileIDy)).toUShort(), isGPU = true)
 
-                    this.state = State.GetTileDataLow(state.sharedState, tileID)
+                    this.state = State.GetTileDataLow(state.sharedState.copy(hasDrawnWindowThisLine = true), tileID)
                     return
                 }
             }
@@ -129,7 +139,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
             return
         }
 
-        val pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, false) }
+        val pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, 0, false) }
         for (x in 0..7) {
             // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
             val first = if (state.tileHighData and (1u shl (7 - x)).toUByte() >= 1u) {
@@ -151,7 +161,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
                 0x11u -> ColorID.THREE
                 else -> throw Exception("Invalid color ID: ${first + second}")
             }
-            pixelRow[x] = Pixel(colorID, 0, false)
+            pixelRow[x] = Pixel(colorID, 0, 0, false)
         }
 
         // Push to Fifo
