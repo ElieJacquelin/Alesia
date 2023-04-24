@@ -149,11 +149,17 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
         // Load the MBC type of the rom
         mbc = when(rom[0x0147].toUInt()) {
             0x00u -> MBC0(rom, disableWritingToRom)
-            0x01u, 0x02u, 0x03u -> {
-                MBC1( rom, ramSize)
+            0x01u, 0x02u -> {
+                MBC1( rom, ramSize , false)
             }
-            0x11u, 0x12u, 0x13u -> {
-                MBC3( rom, ramSize)
+            0x03u -> {
+                MBC1( rom, ramSize , true)
+            }
+            0x11u, 0x12u -> {
+                MBC3( rom, ramSize, false)
+            }
+            0x13u -> {
+                MBC3( rom, ramSize, true)
             }
             else -> throw Exception("Unsupported MBC")
         }
@@ -177,5 +183,13 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
 
     fun unlockOAM() {
         isOAMLocked = false
+    }
+
+    fun dumpRam(): UByteArray {
+        return this.mbc.dumpRam()
+    }
+
+    fun loadRam(ram: UByteArray) {
+        this.mbc.loadRam(ram)
     }
 }

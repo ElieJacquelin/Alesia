@@ -3,8 +3,9 @@ package memory
 @OptIn(ExperimentalUnsignedTypes::class)
 // Default no memory controller which simply read and write from the main memory
 class MBC0(val rom: UByteArray, val disableWritingToRom: Boolean = true) : MBC {
+    override val hasBattery = false
 
-    private val ram = UByteArray(0x2000)
+    override var ram = UByteArray(0x2000)
 
     override fun get(address: UShort): UByte {
         return when(address) {
@@ -34,5 +35,4 @@ class MBC0(val rom: UByteArray, val disableWritingToRom: Boolean = true) : MBC {
         }
 
     }
-
 }

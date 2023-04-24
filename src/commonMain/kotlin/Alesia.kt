@@ -22,14 +22,38 @@ class Alesia: Screen.FrameUpdateListener {
     var shouldSleep = false
     var clockStart = now()
     var speedMode = false
+    private var savePath: Path? = null
 
     init {
 
     }
 
-    suspend fun runRom(fileSystem: FileSystem, path: Path) {
-        val rom = loadRom(fileSystem, path)
+    fun stopRom(fileSystem: FileSystem) {
+        if(savePath == null) {
+            return
+        }
+        val saveData = memory.dumpRam()
+        if (saveData.isEmpty()) {
+            // Prevent saving files for cartridges which does not have battery
+            return
+        }
+        val saveFile = fileSystem.openReadWrite(savePath!!, mustCreate = false, mustExist = false)
+        saveFile.resize(0L) // Delete any existing data
+        // Write save data to file
+        saveFile.write(0L, saveData.toByteArray(), 0, saveData.size)
+    }
+
+    suspend fun runRom(fileSystem: FileSystem, romPath: Path, savePath: Path) {
+        if (!fileSystem.exists(romPath)) {
+            throw Exception("ROM file doesn't exists")
+        }
+        this.savePath = savePath
+        val rom = loadFile(fileSystem, romPath)
         memory.loadRom(rom)
+        val savedRam = loadFile(fileSystem, savePath)
+        if(savedRam.isNotEmpty()) {
+           memory.loadRam(savedRam)
+        }
 
         while (true) {
             cpu.tick()
@@ -55,9 +79,9 @@ class Alesia: Screen.FrameUpdateListener {
 
     }
 
-    private fun loadRom(fileSystem: FileSystem, path: Path): UByteArray {
-
-        val romSize = fileSystem.metadata(path).size
+    private fun loadFile(fileSystem: FileSystem, path: Path): UByteArray {
+        val metadata = fileSystem.metadataOrNull(path) ?: return UByteArray(0)
+        val romSize = metadata.size
         val rom = ByteArray(romSize!!.toInt())
         val buffer = fileSystem.source(path).buffer()
         buffer.readFully(rom)

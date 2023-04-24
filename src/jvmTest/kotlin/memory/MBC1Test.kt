@@ -11,12 +11,12 @@ class MBC1Test {
 
     @BeforeTest
     fun setUp() {
-        mbc = MBC1(rom, 0x4000)
+        mbc = MBC1(rom, 0x4000, true)
     }
 
     private fun setRomBankNumbers(bankNumber: Int) {
         rom = UByteArray(0x4000 * (bankNumber + 1))
-        mbc = MBC1(rom, 0x4000)
+        mbc = MBC1(rom, 0x4000, true)
     }
 
     private fun setValue(value: UByte, bankNumber: Int, relativeAddress: Int) {

@@ -10,12 +10,12 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
     internal sealed class State {
         abstract val sharedState: SharedState
         data class GetTile(override val sharedState: SharedState, val dotCount: Int = 0) : State()
-        data class GetTileDataLow(override val sharedState: SharedState, val tileID: UByte, val dotCount: Int = 0): State()
-        data class GetTileDataHigh(override val sharedState: SharedState, val tileID: UByte, val tileLowData: UByte, val dotCount: Int = 0): State()
-        data class Push(override val sharedState: SharedState, val tileLowData: UByte, val tileHighData: UByte): State()
+        data class GetTileDataLow(override val sharedState: SharedState, val tileID: UByte, val line: Int, val windowTile: Boolean, val dotCount: Int = 0): State()
+        data class GetTileDataHigh(override val sharedState: SharedState, val tileID: UByte, val line: Int, val windowTile: Boolean, val tileLowData: UByte, val dotCount: Int = 0): State()
+        data class Push(override val sharedState: SharedState, val tileLowData: UByte, val tileHighData: UByte, val windowTile: Boolean): State()
     }
 
-    internal data class SharedState(val currentTileMapOffset: UInt, val currentLine: Int, val backgroundFiFo: ArrayDeque<Pixel>, val internalWindowLineCounter: UInt = 0u, val hasDrawnWindowThisLine: Boolean = false)
+    internal data class SharedState(val currentTileMapOffset: UInt, val currentLine: Int, val backgroundFiFo: ArrayDeque<Pixel>, val internalWindowLineCounter: UInt = 0u, val hasDrawnWindowThisLine: Boolean = false, val hasDroppedFirstTileScroll: Boolean = false)
 
     internal lateinit var state: State
 
@@ -57,7 +57,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
                     val tileIDy = (state.sharedState.internalWindowLineCounter / 8u)
                     val tileID = memory.get((mapTile + tileIDx + (0x20u * tileIDy)).toUShort(), isGPU = true)
 
-                    this.state = State.GetTileDataLow(state.sharedState.copy(hasDrawnWindowThisLine = true), tileID)
+                    this.state = State.GetTileDataLow(state.sharedState.copy(hasDrawnWindowThisLine = true), tileID, state.sharedState.currentLine, true)
                     return
                 }
             }
@@ -66,13 +66,14 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
             val mapTile = if (controlRegister.getBgTileMap()) 0x9C00u else 0x9800u
             val scrollY = memory.get(0xFF42u, isGPU = true) // Number of pixels scroll to the right
             val scrollX = memory.get(0xFF43u, isGPU = true)
+            val scrollAdjustedLine = state.sharedState.currentLine + scrollY.toInt().mod(8)
             // Divide the scroll register by 8 to find the related tile being displayed
             val tileIDx = (currentTileMapOffset + (scrollX / 8u)) % 32u // Wraps around if reaching the end of the line
-            val tileIDy = ((state.sharedState.currentLine / 8).toUByte() + (scrollY / 8u)) % 32u
+            val tileIDy = ((scrollAdjustedLine / 8).toUByte() + (scrollY / 8u)) % 32u
             val tileID = memory.get((mapTile + tileIDx + (0x20u * tileIDy)).toUShort(), isGPU = true)
 
 
-            this.state = State.GetTileDataLow(state.sharedState, tileID)
+            this.state = State.GetTileDataLow(state.sharedState, tileID, scrollAdjustedLine, false)
             return
         }
         // Get tile step lasts 2 dots, do nothing for the first dot
@@ -82,25 +83,25 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
     private fun getTileDataLowStep(state: State.GetTileDataLow) {
         val (_, currentLine) = state.sharedState
         if (state.dotCount >= 1) {
-            val tileLowData = getTileDataStep(state.tileID, true, currentLine)
-            this.state = State.GetTileDataHigh(sharedState = state.sharedState, tileID = state.tileID, tileLowData = tileLowData)
+            val tileLowData = getTileDataStep(state.tileID, true, state.line)
+            this.state = State.GetTileDataHigh(sharedState = state.sharedState, line = state.line, windowTile = state.windowTile, tileID = state.tileID, tileLowData = tileLowData)
             return
         }
         // Get Tile data low step lasts 2 dots, do nothing for the first dot
-        this.state = State.GetTileDataLow(state.sharedState, state.tileID, state.dotCount + 1)
+        this.state = State.GetTileDataLow(state.sharedState, state.tileID, state.line, state.windowTile, state.dotCount + 1)
     }
 
     private fun getTileDataHighStep(state: State.GetTileDataHigh) {
         val (_, currentLine) = state.sharedState
         if (state.dotCount >= 1) {
-            val tileHighData = getTileDataStep(state.tileID, false, currentLine)
+            val tileHighData = getTileDataStep(state.tileID, false, state.line)
 
-            this.state = State.Push(state.sharedState, state.tileLowData, tileHighData)
+            this.state = State.Push(state.sharedState, state.tileLowData, tileHighData, state.windowTile)
             pushToFifoStep(this.state as State.Push) // This step does an extra push without waiting for the next tick
             return
         }
         // Get Tile data high step lasts 2 dots, do nothing for the first dot
-        this.state = State.GetTileDataHigh(state.sharedState, state.tileID, state.tileLowData, state.dotCount + 1)
+        this.state = State.GetTileDataHigh(state.sharedState, state.tileID, state.line, state.windowTile, state.tileLowData, state.dotCount + 1)
     }
 
     private fun getTileDataStep(tileID: UByte, low: Boolean, currentLine: Int): UByte {
@@ -138,8 +139,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
             // Stay in the same step until it succeed
             return
         }
-
-        val pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, 0, false) }
+        var pixelRow = Array(8) { Pixel(ColorID.ZERO, 0, 0, false) }
         for (x in 0..7) {
             // Logic is explained here: https://www.huderlem.com/demos/gameboy2bpp.html
             val first = if (state.tileHighData and (1u shl (7 - x)).toUByte() >= 1u) {
@@ -164,11 +164,17 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
             pixelRow[x] = Pixel(colorID, 0, 0, false)
         }
 
+        if(!this.state.sharedState.hasDroppedFirstTileScroll && !state.windowTile) {
+            // Smooth horizontal scrolling, we drop pixels on the first tile to have only partial rendering of that tile
+            // The last tile in theory needs to be cropped but the screen already stops reading pixels when the pixel count has been reached
+            pixelRow = pixelRow.drop((memory.get(0xFF43u)).mod(8u).toInt()).toTypedArray()
+        }
+
         // Push to Fifo
         backgroundFiFo.addAll(pixelRow)
         // Move to the next tile to be rendered
         val newTileMapOffset = if(state.sharedState.currentTileMapOffset == 31u) 0u else state.sharedState.currentTileMapOffset + 1u
-        val newSharedState = state.sharedState.copy(currentTileMapOffset = newTileMapOffset)
+        val newSharedState = state.sharedState.copy(currentTileMapOffset = newTileMapOffset, hasDroppedFirstTileScroll = true)
 
         this.state = State.GetTile(newSharedState)
     }

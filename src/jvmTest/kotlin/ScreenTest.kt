@@ -39,28 +39,6 @@ internal class ScreenTest {
     }
 
     @Test
-    fun `OAM Scan generates the OAM data on the first dot`() {
-        // Given the OAM data for the first sprite is stored
-        memory.set(0xFE00u, 0xFAu)
-        memory.set(0xFE01u, 0xFBu)
-        memory.set(0xFE02u, 0xFCu)
-        memory.set(0xFE03u, 0xFDu)
-        // And the current state is OAM Scan for the very first dot
-        screen.state = Screen.State.OAMScan(buildSharedState())
-
-        // When a new dot is being processed
-        screen.tick()
-
-        // Then the OAM has 40 items
-        assertEquals(40, screen.OAM.size)
-        // And the first sprite has the relevant data
-        assertEquals((0xFAu).toInt(), screen.OAM[0].yPos)
-        assertEquals((0xFBu).toInt(), screen.OAM[0].xPos)
-        assertEquals(0xFCu, screen.OAM[0].tileIndex)
-        assertEquals(0xFDu, screen.OAM[0].attributesFlags)
-    }
-
-    @Test
     fun `OAM Scan finds sprite in the current line - Before scanline 16x16`() {
         // Given the first sprite is at position 0
         val sprite = Object(0,0,0xFFu, 0xFFu, 0xFE00u)

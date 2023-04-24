@@ -4,7 +4,6 @@ import rendering.PixelFetcher
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdControlRegister(memory), backgroundFifo: ArrayDeque<Pixel> = ArrayDeque(), objectFifo: ArrayDeque<Pixel> = ArrayDeque(), pixelFetcher: PixelFetcher = PixelFetcher(controlRegister, memory)) {
-    var OAM = generateOAM()
     internal var state: State = State.OAMScan(SharedState(0, 0,  List(160) { ArrayList() }, backgroundFifo, objectFifo, pixelFetcher))
 
     internal sealed class State {
@@ -387,11 +386,10 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
     private fun generateOAM(): Array<Object> {
         val result = mutableListOf<Object>()
-        for(objectAddress in 0xFE00u..0xFE9Fu step 4) {
+        for (objectAddress in 0xFE00u..0xFE9Fu step 4) {
             result.add(Object.ObjectFromMemoryAddress(objectAddress.toUShort(), memory))
         }
-        OAM = result.toTypedArray()
-        return OAM
+        return result.toTypedArray<Object>()
     }
 
 

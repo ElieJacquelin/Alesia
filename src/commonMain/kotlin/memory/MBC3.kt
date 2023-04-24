@@ -1,13 +1,13 @@
 package memory
 
 @OptIn(ExperimentalUnsignedTypes::class)
-class MBC3(private val rom: UByteArray, ramSize: Int): MBC {
+class MBC3(private val rom: UByteArray, ramSize: Int, override val hasBattery: Boolean): MBC {
 
     private var ramEnabled: Boolean = false
     private var romBankNumber: UByte = 1u
     private var ramBankNumber: UByte = 0u
 
-    private var ram = UByteArray(ramSize)
+    override var ram = UByteArray(ramSize)
     private var totalRamBanks = ramSize / 0x2000
 
     override fun get(address: UShort): UByte {

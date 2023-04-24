@@ -54,7 +54,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 0, false), pixelFetcher.state)
     }
 
     @Test
@@ -71,7 +71,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0, false), pixelFetcher.state)
     }
 
     @Test
@@ -88,7 +88,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID which is the same tile as the first line
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 1, false), pixelFetcher.state)
     }
 
     @Test
@@ -105,7 +105,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 8, false), pixelFetcher.state)
     }
 
     @Test
@@ -126,7 +126,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 8, false), pixelFetcher.state)
     }
 
     @Test
@@ -147,7 +147,27 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 16, false), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get tile step - Line 8 - Smooth vertical scrolling`() {
+        // GIVEN the PixelFetcher is on the get tile step on the second dot for the 16th line and 4th tile
+        val sharedState = buildSharedState(currentLine = 16, currentTileMapOffset = 4u)
+        pixelFetcher.state = PixelFetcher.State.GetTile(sharedState, 1)
+        // AND the BG tile map is set to 0x9800
+        lcdControlRegister.setBgTileMap(false)
+        // AND the Scroll Y is set to 2
+        memory.set(0xFF42u, 2u)
+        // AND the tile ID to be fetched is set to 2 (0x9800 + 2 (SCX/8) + 0x20 * ((currentLine + scrollY.mod(8) / 8) + 3 (SCY/8))
+        memory.set(0x9844u, 0x02u)
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the new state is the get tile low data step for the correct tile ID which is on the next row
+        // AND the tile being fetched is adjusted (real line + scrollY)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 18, false), pixelFetcher.state)
     }
 
     @Test
@@ -172,7 +192,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID which is on from the background
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 8, false), pixelFetcher.state)
     }
 
     @Test
@@ -196,7 +216,7 @@ class PixelFetcherTest {
 
         // THEN the new state is the get tile low data step for the correct tile ID from the Window
         // AND the has drawn window this line flag is set
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 16, true), pixelFetcher.state)
     }
 
     @Test
@@ -221,7 +241,7 @@ class PixelFetcherTest {
 
         // THEN the new state is the get tile low data step for the correct tile ID from the Window
         // AND the has drawn window this line flag is set
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 16, true), pixelFetcher.state)
     }
 
     @Test
@@ -244,7 +264,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the correct tile ID from the Window
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState.copy(hasDrawnWindowThisLine = true),0x02u, 16, true), pixelFetcher.state)
     }
 
     @Test
@@ -267,20 +287,20 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the new state is the get tile low data step for the tile that is not the window
-        assertNotEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0), pixelFetcher.state)
+        assertNotEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0, false), pixelFetcher.state)
     }
 
     @Test
     fun `Get tile Data low step - first dot`() {
         // GIVEN the PixelFetcher is on the tile data low step on the first dot
         val sharedState = buildSharedState()
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState,  0x02u, 0)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState,  0x02u, 0, false)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the state stays on Get Tile Data Low but with the dot count increased
-        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 1), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataLow(sharedState,0x02u, 0, false, 1), pixelFetcher.state)
     }
 
     @Test
@@ -292,13 +312,13 @@ class PixelFetcherTest {
         // AND the tile data is set
         memory.set(0x8020u, 0x01u)
         // AND the PixelFetcher is on the tile data low step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 1)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 0, false, 1)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u,0, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -310,13 +330,13 @@ class PixelFetcherTest {
         // AND the tile data is set for the second line (1 line = 2 bytes)
         memory.set(0x8022u, 0x01u)
         // AND the PixelFetcher is on the tile data low step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 1)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 1, false, 1)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 1, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -328,13 +348,13 @@ class PixelFetcherTest {
         // AND the tile data is set for the eight line
         memory.set(0x802Eu, 0x01u)
         // AND the PixelFetcher is on the tile data low step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 1)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 7, false, 1)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 7, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -346,13 +366,13 @@ class PixelFetcherTest {
         // AND the tile data is set for the first line
         memory.set(0x8020u, 0x01u)
         // AND the PixelFetcher is on the tile data low step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 1)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 8, false, 1)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 8, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -364,13 +384,13 @@ class PixelFetcherTest {
         // AND the tile data is set
         memory.set(0x9020u, 0x01u)
         // AND the PixelFetcher is on the tile data low step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 1)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x02u, 0, false, 1)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -382,13 +402,13 @@ class PixelFetcherTest {
         // AND the tile data is set
         memory.set(0x8810u, 0x01u)
         // AND the PixelFetcher is on the tile data low step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x81u, 1) // index 129
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x81u, 0, false, 1) // index 129
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x81u, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x81u, 0, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -400,13 +420,13 @@ class PixelFetcherTest {
         // AND the tile data is set
         memory.set(0x8800u, 0x01u)
         // GIVEN the PixelFetcher is on the tile data low step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x80u, 1) // index 128
+        pixelFetcher.state = PixelFetcher.State.GetTileDataLow(sharedState, 0x80u, 0, false, 1) // index 128
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x80u, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0x80u, 0, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
@@ -418,26 +438,26 @@ class PixelFetcherTest {
         // AND the tile data is set
         memory.set(0x8FF0u, 0x01u)
         // AND the PixelFetcher is on the tile data low step on the second dot
-        val newState = PixelFetcher.State.GetTileDataLow(sharedState, 0xFFu, 1) // index 255
+        val newState = PixelFetcher.State.GetTileDataLow(sharedState, 0xFFu, 0, false, 1) // index 255
         pixelFetcher.state = newState
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get tile high data step with the expected low data
-        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0xFFu, 0x01u, 0), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(sharedState, 0xFFu, 0, false, 0x01u, 0), pixelFetcher.state)
     }
 
     @Test
     fun `Get tile Data High step - first dot`() {
         // GIVEN the PixelFetcher is on the tile data high step on the first dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataHigh(buildSharedState() ,0x02u, 0x03u, 0)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataHigh(buildSharedState() ,0x02u, 0, false, 0x03u, 0)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state remains on Get Tile Data High but the dot count is incremented
-        assertEquals(PixelFetcher.State.GetTileDataHigh(buildSharedState(),0x02u, 0x03u, 1), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.GetTileDataHigh(buildSharedState(),0x02u, 0, false, 0x03u, 1), pixelFetcher.state)
     }
 
     @Test
@@ -451,20 +471,20 @@ class PixelFetcherTest {
         // AND the Fifo is not empty
         sharedState.backgroundFiFo.add(Pixel(ColorID.ZERO, 0, 0 , false))
         // AND the PixelFetcher is on the tile data high step on the second dot
-        pixelFetcher.state = PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0x03u, 1)
+        pixelFetcher.state = PixelFetcher.State.GetTileDataHigh(sharedState, 0x02u, 0, false, 0x03u, 1)
 
         // WHEN the machine ticks
         pixelFetcher.tick()
 
         // THEN the new state is the get push high data with the expected parameters
-        assertEquals(PixelFetcher.State.Push(sharedState,0x03u, 0x01u), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.Push(sharedState,0x03u, 0x01u, false), pixelFetcher.state)
     }
 
     @Test
     fun `Get push data step - Fifo not empty`() {
         // GIVEN the PixelFetcher is on push data step
         val sharedState = buildSharedState()
-        pixelFetcher.state = PixelFetcher.State.Push(sharedState,0x02u, 0x03u)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState,0x02u, 0x03u, false)
         // AND the Fifo is not empty
         sharedState.backgroundFiFo.add(Pixel(ColorID.ZERO, 0, 0 , false))
 
@@ -472,7 +492,7 @@ class PixelFetcherTest {
         pixelFetcher.tick()
 
         // THEN the state stays the same
-        assertEquals(PixelFetcher.State.Push(sharedState, 0x02u, 0x03u), pixelFetcher.state)
+        assertEquals(PixelFetcher.State.Push(sharedState, 0x02u, 0x03u, false), pixelFetcher.state)
     }
 
     @Test
@@ -480,7 +500,7 @@ class PixelFetcherTest {
         // GIVEN the PixelFetcher is on push data step
         // low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
         val sharedState = buildSharedState()
-        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x06u, 0x03u)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x06u, 0x03u, false)
         // AND the Fifo is empty
         val backgroundFifo = sharedState.backgroundFiFo
         backgroundFifo.clear()
@@ -500,7 +520,93 @@ class PixelFetcherTest {
         assertEquals(0, backgroundFifo.size)
 
         // AND the state is set to get Tile for the next tile
-        val expectedSharedState = sharedState.copy(currentTileMapOffset = 1u)
+        val expectedSharedState = sharedState.copy(currentTileMapOffset = 1u, hasDroppedFirstTileScroll = true)
+        assertEquals(PixelFetcher.State.GetTile(expectedSharedState), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get push data step - Smooth horizontal scrolling`() {
+        // GIVEN the PixelFetcher is on push data step
+        // low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
+        val sharedState = buildSharedState()
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x06u, 0x03u, false)
+        // AND Scroll X is set to 3
+        memory.set(0xFF43u, 3u)
+        val backgroundFifo = sharedState.backgroundFiFo
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN the first 3 pixels are not added to the fifo
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ONE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.THREE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.TWO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(0, backgroundFifo.size)
+
+        // AND the state is set to get Tile for the next tile
+        val expectedSharedState = sharedState.copy(currentTileMapOffset = 1u, hasDroppedFirstTileScroll = true)
+        assertEquals(PixelFetcher.State.GetTile(expectedSharedState), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get push data step - Smooth horizontal scrolling - Window`() {
+        // GIVEN the PixelFetcher is on push data step
+        // low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
+        // And the tile is a window tile
+        val sharedState = buildSharedState()
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x06u, 0x03u, true)
+        // AND Scroll X is set to 3
+        memory.set(0xFF43u, 3u)
+        val backgroundFifo = sharedState.backgroundFiFo
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN all pixels are added to the fifo has scrolling doesn't affect windows
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ONE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.THREE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.TWO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(0, backgroundFifo.size)
+
+        // AND the state is set to get Tile for the next tile
+        val expectedSharedState = sharedState.copy(currentTileMapOffset = 1u, hasDroppedFirstTileScroll = true)
+        assertEquals(PixelFetcher.State.GetTile(expectedSharedState), pixelFetcher.state)
+    }
+
+    @Test
+    fun `Get push data step - Smooth horizontal scrolling - already dropped`() {
+        // GIVEN the PixelFetcher is on push data step
+        // low: 0000 0110 / high: 0000 0011 gives 0000 0132 Pixel colors
+        // And the already dropped tiles flag is set
+        val sharedState = buildSharedState().copy(hasDroppedFirstTileScroll = true)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x06u, 0x03u, false)
+        // AND Scroll X is set to 3
+        memory.set(0xFF43u, 3u)
+        val backgroundFifo = sharedState.backgroundFiFo
+
+        // WHEN the machine ticks
+        pixelFetcher.tick()
+
+        // THEN all pixels are added to the fifo has the scrolling has already been handled on the first tile
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ZERO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.ONE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.THREE, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(Pixel(ColorID.TWO, 0, 0, false), backgroundFifo.removeFirst())
+        assertEquals(0, backgroundFifo.size)
+
+        // AND the state is set to get Tile for the next tile
+        val expectedSharedState = sharedState.copy(currentTileMapOffset = 1u, hasDroppedFirstTileScroll = true)
         assertEquals(PixelFetcher.State.GetTile(expectedSharedState), pixelFetcher.state)
     }
 
@@ -508,7 +614,7 @@ class PixelFetcherTest {
     fun `reset() reset the state to GetTile`() {
         // GIVEN the state is on any state
         val sharedState = buildSharedState(1u, 2, ArrayDeque())
-        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u, false)
 
         // WHEN the reset function is called
         val newLine = 12
@@ -524,7 +630,7 @@ class PixelFetcherTest {
     fun `reset() increments internal window counter if has drawn`() {
         // GIVEN the has drawn window flag is set and the line counter is 10
         val sharedState = buildSharedState(internalLineCounter = 10u, hasDrawnWindowThisLine = true)
-        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u, false)
 
         // WHEN the reset function is called
         val newLine = 12
@@ -541,7 +647,7 @@ class PixelFetcherTest {
     fun `reset() ignores internal window counter if has not drawn`() {
         // GIVEN the has drawn window flag is not set and the line counter is 10
         val sharedState = buildSharedState(internalLineCounter = 10u, hasDrawnWindowThisLine = false)
-        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u)
+        pixelFetcher.state = PixelFetcher.State.Push(sharedState, 0x01u, 0x02u, false)
 
         // WHEN the reset function is called
         val newLine = 12

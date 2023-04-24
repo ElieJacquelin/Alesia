@@ -42,8 +42,9 @@ fun main() = application {
 
     Window(
         onCloseRequest = {
-            exitApplication()
             emulatorScope.cancel()
+            alesia.stopRom(FileSystem.SYSTEM)
+            exitApplication()
         },
         title = "Alesia",
         state = rememberWindowState(width = 600.dp, height = 600.dp),
@@ -87,7 +88,11 @@ fun main() = application {
                     onClick = {
                         isRunning = true
                         emulatorScope.launch(newSingleThreadContext("emulator")) {
-                            alesia.runRom(FileSystem.SYSTEM, "C:\\Users\\eliej\\Downloads\\gb\\Tetris.gb".toPath())
+                            val romPath = "C:\\Users\\eliej\\Downloads\\gb\\Tetris.gb"
+                            alesia.runRom(FileSystem.SYSTEM,
+                                romPath.toPath(),
+                                romPath.replace(".gb", ".save").toPath()
+                                )
                         }
                     }) {
                     Text("Start")
