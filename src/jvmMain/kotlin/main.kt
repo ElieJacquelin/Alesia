@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class, ExperimentalStdlibApi::class)
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,19 +33,20 @@ import okio.Path.Companion.toPath
 //    alesia.runRom(FileSystem.SYSTEM, "C:\\Users\\eliej\\Downloads\\gb\\instr_timing.gb".toPath())
 //}
 
-@OptIn(ExperimentalStdlibApi::class)
-val alesia = Alesia()
+
+val romPath = "C:\\Users\\eliej\\Downloads\\gb\\Metroid.gb"
+val savePath = romPath.replace(".gb", ".save").toPath()
+val fileParser = JvmFileParser(romPath.toPath(), savePath)
+val alesia = Alesia(fileParser)
 
 @OptIn(ExperimentalComposeUiApi::class)
-@ExperimentalStdlibApi
-@ExperimentalUnsignedTypes
 fun main() = application {
     val emulatorScope = rememberCoroutineScope()
 
     Window(
         onCloseRequest = {
             emulatorScope.cancel()
-            alesia.stopRom(FileSystem.SYSTEM)
+            alesia.stopRom()
             exitApplication()
         },
         title = "Alesia",
@@ -88,11 +91,7 @@ fun main() = application {
                     onClick = {
                         isRunning = true
                         emulatorScope.launch(newSingleThreadContext("emulator")) {
-                            val romPath = "C:\\Users\\eliej\\Downloads\\gb\\Tetris.gb"
-                            alesia.runRom(FileSystem.SYSTEM,
-                                romPath.toPath(),
-                                romPath.replace(".gb", ".save").toPath()
-                                )
+                            alesia.runRom()
                         }
                     }) {
                     Text("Start")

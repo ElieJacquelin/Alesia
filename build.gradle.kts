@@ -44,7 +44,6 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-                implementation("com.squareup.okio:okio:$okioVersion")
                 implementation(compose.desktop.currentOs)
             }
          }
@@ -59,6 +58,12 @@ kotlin {
                 implementation("com.squareup.okio:okio-fakefilesystem:$okioVersion")
             }
         }
+        val jvmMain by getting {
+            dependencies {
+                implementation("com.squareup.okio:okio:$okioVersion")
+            }
+        }
+
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("stdlib-common"))

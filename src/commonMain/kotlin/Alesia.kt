@@ -4,15 +4,12 @@ import androidx.compose.runtime.setValue
 import io.Joypad
 import kotlinx.coroutines.delay
 import memory.Memory
-import okio.FileSystem
-import okio.Path
-import okio.buffer
 import java.time.Instant.now
 
 
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
-class Alesia: Screen.FrameUpdateListener {
+class Alesia(val fileParser: FileParser): Screen.FrameUpdateListener {
     var frameBitmap by mutableStateOf(ByteArray(160 * 144 * 4))
 
     val memory = Memory()
@@ -22,36 +19,25 @@ class Alesia: Screen.FrameUpdateListener {
     var shouldSleep = false
     var clockStart = now()
     var speedMode = false
-    private var savePath: Path? = null
 
     init {
 
     }
 
-    fun stopRom(fileSystem: FileSystem) {
-        if(savePath == null) {
-            return
-        }
+    fun stopRom() {
         val saveData = memory.dumpRam()
         if (saveData.isEmpty()) {
             // Prevent saving files for cartridges which does not have battery
             return
         }
-        val saveFile = fileSystem.openReadWrite(savePath!!, mustCreate = false, mustExist = false)
-        saveFile.resize(0L) // Delete any existing data
-        // Write save data to file
-        saveFile.write(0L, saveData.toByteArray(), 0, saveData.size)
+        fileParser.writeSave(saveData)
     }
 
-    suspend fun runRom(fileSystem: FileSystem, romPath: Path, savePath: Path) {
-        if (!fileSystem.exists(romPath)) {
-            throw Exception("ROM file doesn't exists")
-        }
-        this.savePath = savePath
-        val rom = loadFile(fileSystem, romPath)
+    suspend fun runRom() {
+        val rom = fileParser.loadRom()
         memory.loadRom(rom)
-        val savedRam = loadFile(fileSystem, savePath)
-        if(savedRam.isNotEmpty()) {
+        val savedRam = fileParser.loadSave()
+        if(savedRam != null) {
            memory.loadRam(savedRam)
         }
 
@@ -79,16 +65,7 @@ class Alesia: Screen.FrameUpdateListener {
 
     }
 
-    private fun loadFile(fileSystem: FileSystem, path: Path): UByteArray {
-        val metadata = fileSystem.metadataOrNull(path) ?: return UByteArray(0)
-        val romSize = metadata.size
-        val rom = ByteArray(romSize!!.toInt())
-        val buffer = fileSystem.source(path).buffer()
-        buffer.readFully(rom)
 
-        buffer.close()
-        return rom.toUByteArray()
-    }
 
 
     fun handleKeyEvent(key: Joypad.Key, pressed: Boolean) {
