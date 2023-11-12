@@ -2,7 +2,8 @@ import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("multiplatform") version "1.9.20"
+    kotlin("multiplatform") version "1.9.23"
+    id("org.jetbrains.compose")
 }
 
 group = "me.eliej"
@@ -23,10 +24,15 @@ kotlin {
     sourceSets {
         val okioVersion = "3.0.0"
 
-        commonMain {
+        val commonMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2-wasm0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+
+                implementation(compose.runtime)
+                implementation(compose.ui)
+                implementation(compose.foundation)
+                implementation(compose.material)
             }
          }
         commonTest {
@@ -54,6 +60,10 @@ kotlin {
                 implementation("io.mockk:mockk-common:1.12.2")
                 implementation("io.mockk:mockk:1.12.2")
             }
+        }
+
+        val wasmJsMain by getting {
+            dependsOn(commonMain)
         }
     }
 

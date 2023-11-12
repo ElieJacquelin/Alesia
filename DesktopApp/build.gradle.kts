@@ -21,7 +21,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(project(":Alesia"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
                 implementation(compose.desktop.currentOs)
             }
         }

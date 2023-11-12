@@ -27,8 +27,8 @@ kotlin {
                     static = (static ?: mutableListOf()).apply {
                         // Serve sources to debug inside browser
                         add(project.rootDir.path)
-                        add(project.rootDir.path + "/Alesia/")
-                        add(project.rootDir.path + "/WebApp/")
+                        add(project.rootDir.path + "\\Alesia\\")
+                        add(project.rootDir.path + "\\WebApp\\")
                     }
                 }
             }
@@ -37,7 +37,7 @@ kotlin {
 //        applyBinaryen()
     }
     sourceSets {
-        val wasmJsMain by getting  {
+        val commonMain by getting  {
             dependencies {
                 implementation(project(":Alesia"))
                 implementation(compose.runtime)

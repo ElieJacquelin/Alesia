@@ -15,14 +15,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.CanvasBasedWindow
-import compose.Gameboy
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.configureWebResources
-import org.jetbrains.compose.resources.urlResource
 
-
-val alesia = Alesia(WebFileParser())
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
 @ExperimentalComposeUiApi
@@ -30,55 +26,19 @@ val alesia = Alesia(WebFileParser())
 fun main()  {
     configureWebResources {
         // same as default - this is not necessary to add here. It's here to show this feature
-        setResourceFactory { urlResource("./$it") }
+        resourcePathMapping { path -> "./$path" }
     }
 
     CanvasBasedWindow("Alesia", canvasElementId = "alesiaCanvas") {
         App()
     }
-
-//    Window(
-//        onCloseRequest = {
-//            emulatorScope.cancel()
-//            alesia.stopRom()
-//            exitApplication()
-//        },
-//        title = "Alesia",
-//        state = rememberWindowState(width = 600.dp, height = 600.dp),
-//        onKeyEvent = {
-//            val pressed = it.type == KeyEventType.KeyDown
-//            val key = if (it.key == Key.Z) {
-//                Joypad.Key.A
-//            } else if (it.key == Key.X) {
-//                Joypad.Key.B
-//            } else if (it.key == Key.Enter) {
-//                Joypad.Key.Start
-//            } else if (it.key == Key.ShiftRight) {
-//                Joypad.Key.Select
-//            } else if (it.key == Key.DirectionUp) {
-//                Joypad.Key.Up
-//            } else if (it.key == Key.DirectionDown) {
-//                Joypad.Key.Down
-//            } else if (it.key == Key.DirectionLeft) {
-//                Joypad.Key.Left
-//            } else if (it.key == Key.DirectionRight) {
-//                Joypad.Key.Right
-//            } else if (it.key == Key.Spacebar) {
-//                alesia.triggerSpeedMode(pressed)
-//                return@Window true
-//            } else {
-//                // Unknown key, abort here
-//                return@Window true
-//            }
-//            alesia.handleKeyEvent(key, pressed)
-//            true
-//        }
-//    ) {
 }
 
+@OptIn(ExperimentalUnsignedTypes::class, ExperimentalStdlibApi::class)
 @Composable
 fun App() {
     val emulatorScope = rememberCoroutineScope()
+    val alesia = remember { Alesia(WebFileParser()) }
 
     MaterialTheme() {
         var isRunning by remember { mutableStateOf(false) }
@@ -97,7 +57,7 @@ fun App() {
                 Text("Start")
             }
 
-//            Gameboy(alesia)
+            Gameboy(alesia)
         }
     }
 }
