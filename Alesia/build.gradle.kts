@@ -15,9 +15,9 @@ kotlin {
 //            browser()
 //        }
 //
-//        wasm {
-//            browser()
-//        }
+        wasmJs {
+            browser()
+        }
     }
 
     sourceSets {
@@ -26,7 +26,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0-RC")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2-wasm0")
             }
          }
         commonTest {

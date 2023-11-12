@@ -1,10 +1,8 @@
 import io.Joypad
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.callbackFlow
 import memory.Memory
-import java.time.Instant.now
 
 
 @ExperimentalStdlibApi
@@ -34,8 +32,8 @@ class Alesia(val fileParser: FileParser) {
                     frameRgb[pixelIndex + 2] = blue.toByte()
                     frameRgb[pixelIndex + 3] = 0xff.toByte() // Ignore Alpha
                 }
-
-                trySendBlocking(frameRgb)
+                trySend(frameRgb)
+//                trySendBlocking(frameRgb)
                 shouldSleep = true
             }
         }
@@ -45,7 +43,7 @@ class Alesia(val fileParser: FileParser) {
     }
 
     var shouldSleep = false
-    var clockStart = now()
+//    var clockStart = now()
     var speedMode = false
 
     init {
@@ -81,12 +79,12 @@ class Alesia(val fileParser: FileParser) {
                 memory.set(0xff02u, 0u)
             }
             if (shouldSleep && !speedMode) {
-                val clockEnd = now()
-                val sleepDuration = 16 -(clockEnd.toEpochMilli() - clockStart.toEpochMilli())
-                if ( sleepDuration> 0){
-                    delay(sleepDuration)
-                }
-                clockStart = clockEnd
+//                val clockEnd = now()
+//                val sleepDuration = 16 -(clockEnd.toEpochMilli() - clockStart.toEpochMilli())
+//                if ( sleepDuration> 0){
+//                    delay(sleepDuration)
+//                }
+//                clockStart = clockEnd
                 shouldSleep = false
             }
         }
