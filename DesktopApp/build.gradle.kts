@@ -2,8 +2,8 @@ import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("multiplatform") version "1.8.20"
-    id("org.jetbrains.compose") version "1.4.0"
+    kotlin("multiplatform") version "1.9.20"
+    id("org.jetbrains.compose") version "1.5.10"
 }
 
 group = "me.eliej"
@@ -21,7 +21,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(project(":Alesia"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
                 implementation(compose.desktop.currentOs)
             }
         }
