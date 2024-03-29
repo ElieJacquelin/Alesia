@@ -14,11 +14,11 @@ import org.jetbrains.skia.ImageInfo
 
 @OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 @Composable
-fun Gameboy(alesia: Alesia) {
-    val frame = alesia.frameBitmap.collectAsState(ByteArray(160 * 144 * 4))
+fun Gameboy(frame: ByteArray) {
+//    val frame = alesia.frameBitmap.collectAsState(ByteArray(160 * 144 * 4))
     val bitmap = remember { Bitmap() }
     val info = ImageInfo(160, 144, ColorType.RGB_888X, ColorAlphaType.OPAQUE)
-    bitmap.installPixels(info, frame.value, info.minRowBytes)
+    bitmap.installPixels(info, frame, info.minRowBytes)
 
     Canvas(modifier = Modifier.wrapContentSize()) {
         scale(2f) {
