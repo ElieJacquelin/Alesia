@@ -1,4 +1,5 @@
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -14,13 +15,13 @@ import org.jetbrains.skia.ImageInfo
 
 @OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 @Composable
-fun Gameboy(frame: ByteArray) {
+fun Gameboy(modifier: Modifier = Modifier, frame: ByteArray) {
 //    val frame = alesia.frameBitmap.collectAsState(ByteArray(160 * 144 * 4))
     val bitmap = remember { Bitmap() }
     val info = ImageInfo(160, 144, ColorType.RGB_888X, ColorAlphaType.OPAQUE)
     bitmap.installPixels(info, frame, info.minRowBytes)
 
-    Canvas(modifier = Modifier.wrapContentSize()) {
+    Canvas(modifier = modifier.wrapContentSize()) {
         scale(2f) {
             drawImage(bitmap.asComposeImageBitmap(), filterQuality = FilterQuality.None) // FilterQuality.None allows pixel-perfect scaling with no antialiasing
         }

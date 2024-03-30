@@ -27,11 +27,14 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
 
     private fun disablePPU() {
         this.state = State.Disabled(this.state.sharedState)
+        // Set STAT mode to HBLANK
+        memory.set(0xFF41u, memory.get(0xFF41u)and 0b1111_1100u)
         // Reset LY counter
         updateLYCounter(0u)
     }
 
     private fun enablePPU() {
+        controlRegister.setDisplay(true)
         // Start a new frame
         this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
         // Reset LY counter
@@ -43,8 +46,6 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         // LCD off check
         if (memory.get(0xFF40u) and 0b1000_0000u == 0u.toUByte()) {
             disablePPU()
-        } else if (state is State.Disabled) {
-            enablePPU()
         }
 
         when (state) {
@@ -52,7 +53,11 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             is State.DrawPixels -> drawingPixel(state as State.DrawPixels)
             is State.HorizontalBlank -> horizontalBlankState(state as State.HorizontalBlank)
             is State.VerticalBlank -> verticalBlankState(state as State.VerticalBlank)
-            is State.Disabled -> {} // Ignore
+            is State.Disabled -> {
+                if(controlRegister.getDisplay()) {
+                    enablePPU()
+                }
+            }
         }
     }
 
@@ -85,7 +90,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         }
         val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
         // The OAM scan mode is meant to last 80 dots before moving to the next mode
-        if (currentLineDotCount >= 79) {
+        if (currentLineDotCount == 79) {
             this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
         } else {
             this.state = State.OAMScan(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
@@ -165,7 +170,7 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                     spriteList.remove(spriteToBeDrawn)
                 }
                 // Done with adding sprite pixels for the current X, we can continue with the pixel rendering
-                this.state = State.DrawPixels(state.sharedState.copy(), spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
+                this.state = State.DrawPixels(state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1), spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
                 return
             }
         }
@@ -302,13 +307,13 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             memory.unlockVRAM()
             memory.unlockOAM()
         }
-        if (state.sharedState.currentLineDotCount == 456) {
+        if (state.sharedState.currentLineDotCount == 455) {
             // Reached the end of HBlank, go for the next line or VBlank
             val newLineNumber = state.sharedState.currentLine + 1
             val newSharedState = state.sharedState.copy(currentLineDotCount = 0, currentLine = newLineNumber)
             // Increment LY counter
             updateLYCounter(newLineNumber.toUByte())
-            if (state.sharedState.currentLine == 143) {
+            if (state.sharedState.currentLine == 142) {
                 this.state = State.VerticalBlank(newSharedState)
             } else {
                 this.state = State.OAMScan(newSharedState)
@@ -344,9 +349,11 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
     }
 
     private fun setVBlankInterrupt() {
-        var interrupt = memory.get(0xFF0Fu, isGPU = true)
-        interrupt = interrupt or (1u).toUByte()
-        memory.set(0xFF0Fu, interrupt, isGPU = true)
+//        if(controlRegister.getDisplay()) {
+            var interrupt = memory.get(0xFF0Fu, isGPU = true)
+            interrupt = interrupt or (1u).toUByte()
+            memory.set(0xFF0Fu, interrupt, isGPU = true)
+//        }
     }
 
     private fun verticalBlankState(state: State.VerticalBlank) {
@@ -357,9 +364,9 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             // Also trigger "main" vertical blank interrupt
             setVBlankInterrupt()
         }
-        if (state.sharedState.currentLineDotCount == 456) {
+        if (state.sharedState.currentLineDotCount == 455) {
             // Reached the end of current line, go for the next line or new frame
-            if (state.sharedState.currentLine == 153) {
+            if (state.sharedState.currentLine == 152) {
                 var completeFrame: Array<Array<Pixel>> = Array(144) { emptyArray() }
                 for (row in 0..143) {
                     completeFrame[row] = state.sharedState.frame[row].toTypedArray()

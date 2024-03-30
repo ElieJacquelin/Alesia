@@ -14,19 +14,16 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.CanvasBasedWindow
 import io.Joypad
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.configureWebResources
-import org.jetbrains.skiko.currentNanoTime
 
 @ExperimentalStdlibApi
 @ExperimentalUnsignedTypes
@@ -47,13 +44,14 @@ fun main()  {
 @Composable
 fun App() {
     val emulatorScope = rememberCoroutineScope { Dispatchers.Default }
-    val alesia = remember { Alesia(WebFileParser()) }
+    val fileParser = remember { WebFileParser() }
+    val alesia = remember { Alesia(fileParser) }
     val frame = alesia.frameBitmap.collectAsState(ByteArray(160 * 144 * 4))
     val counter by alesia.fpsCounter.collectAsState()
 
     MaterialTheme() {
         var isRunning by remember { mutableStateOf(false) }
-        var pressed by remember { mutableStateOf(false) }
+        val focusRequester = remember { FocusRequester() }
 
         Column(Modifier.fillMaxSize().background(Color.LightGray), Arrangement.spacedBy(5.dp)) {
             Button(modifier = Modifier
@@ -62,22 +60,48 @@ fun App() {
                 enabled = !isRunning,
                 onClick = {
                     isRunning = true
+
                     emulatorScope.launch {
+                        fileParser.openFilePickerAndLoadRom()
                         alesia.runRom()
                     }
+                    focusRequester.requestFocus()
                 }) {
                 Text("Start")
-            }
-            Button(onClick = {
-                pressed = !pressed
-                alesia.handleKeyEvent(Joypad.Key.Start, pressed)
-            }) {
-                Text ("recompose")
             }
             // Somehow updating the frame object does not trigger a recomposition, so we use that FPS counter to force it
             Text("${counter} FPS")
 
-            Gameboy(frame.value)
+            Gameboy(modifier = Modifier
+                .onKeyEvent {
+                    val pressed = it.type == KeyEventType.KeyDown
+                    val key = if (it.key == Key.Z) {
+                        Joypad.Key.A
+                    } else if (it.key == Key.X) {
+                        Joypad.Key.B
+                    } else if (it.key == Key.Enter) {
+                        Joypad.Key.Start
+                    } else if (it.key == Key.ShiftRight) {
+                        Joypad.Key.Select
+                    } else if (it.key == Key.DirectionUp) {
+                        Joypad.Key.Up
+                    } else if (it.key == Key.DirectionDown) {
+                        Joypad.Key.Down
+                    } else if (it.key == Key.DirectionLeft) {
+                        Joypad.Key.Left
+                    } else if (it.key == Key.DirectionRight) {
+                        Joypad.Key.Right
+                    } else if (it.key == Key.Spacebar) {
+                        alesia.triggerSpeedMode(pressed)
+                        return@onKeyEvent true
+                    } else {
+                        // Unknown key, abort here
+                        return@onKeyEvent true
+                    }
+                    alesia.handleKeyEvent(key, pressed)
+                    true
+                }
+                .focusable(true).focusRequester(focusRequester).focusTarget(),frame.value)
         }
     }
 }
