@@ -3,7 +3,7 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     kotlin("multiplatform") version "1.9.23"
-    id("org.jetbrains.compose")
+    id("com.android.library")
 }
 
 group = "me.eliej"
@@ -11,6 +11,7 @@ version = "1.0-SNAPSHOT"
 
 kotlin {
     targets {
+        androidTarget()
         jvm()
 //        js(IR) {
 //            browser()
@@ -28,11 +29,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
-
-                implementation(compose.runtime)
-                implementation(compose.ui)
-                implementation(compose.foundation)
-                implementation(compose.material)
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0-RC.2")
             }
          }
         commonTest {
@@ -45,6 +42,13 @@ kotlin {
                 implementation("io.mockk:mockk-common:1.10.3-jdk8")
             }
         }
+
+        val androidMain by getting {
+            dependencies {
+
+            }
+        }
+
         val jvmMain by getting {
             dependencies {
             }
@@ -70,4 +74,20 @@ kotlin {
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "11"
     }
+}
+
+android {
+    compileSdk = 34
+    namespace = "com.alesia.alesia"
+    defaultConfig {
+        minSdk = 24
+        targetSdk = 34
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+//    kotlin {
+//        jvmToolchain(8)
+//    }
 }

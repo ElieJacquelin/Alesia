@@ -3,6 +3,7 @@ package compose
 import Alesia
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember

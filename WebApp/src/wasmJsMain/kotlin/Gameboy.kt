@@ -13,17 +13,18 @@ import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.ImageInfo
 
-@OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 @Composable
-fun Gameboy(alesia: Alesia) {
-    val frame = alesia.frameBitmap.collectAsState(ByteArray(160 * 144 * 4))
+fun Gameboy(modifier: Modifier = Modifier, frame: ByteArray) {
     val bitmap = remember { Bitmap() }
     val info = ImageInfo(160, 144, ColorType.RGB_888X, ColorAlphaType.OPAQUE)
-    bitmap.installPixels(info, frame.value, info.minRowBytes)
+    bitmap.installPixels(info, frame, info.minRowBytes)
 
-    Canvas(modifier = Modifier.wrapContentSize()) {
+    Canvas(modifier = modifier.wrapContentSize()) {
         scale(2f) {
-            drawImage(bitmap.asComposeImageBitmap(), filterQuality = FilterQuality.None) // FilterQuality.None allows pixel-perfect scaling with no antialiasing
+            drawImage(
+                bitmap.asComposeImageBitmap(),
+                filterQuality = FilterQuality.None
+            ) // FilterQuality.None allows pixel-perfect scaling with no antialiasing
         }
     }
 }

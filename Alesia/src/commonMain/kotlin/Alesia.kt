@@ -3,8 +3,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.datetime.Clock
 import memory.Memory
-import org.jetbrains.skiko.currentNanoTime
 
 
 @ExperimentalStdlibApi
@@ -15,7 +15,7 @@ class Alesia(val fileParser: FileParser) {
     val screen = Screen(memory)
 
     val fpsCounter = MutableStateFlow("0.00")
-    private var lastFrameTimeStamp = currentNanoTime()
+    private var lastFrameTimeStamp = Clock.System.now()
 
     var frameBitmap = callbackFlow {
         val frameCallback = object: Screen.FrameUpdateListener {
@@ -38,8 +38,12 @@ class Alesia(val fileParser: FileParser) {
                     frameRgb[pixelIndex + 3] = 0xff.toByte() // Ignore Alpha
                 }
                 trySend(frameRgb)
-                val newFrameTimeStamp = currentNanoTime()
-                fpsCounter.value = ((1_000_000_000).toDouble() / (newFrameTimeStamp - lastFrameTimeStamp).toDouble()).toString().slice(0..4)
+                val newFrameTimeStamp = Clock.System.now()
+                var frameCounter = ((1_000_000_000).toDouble() / (newFrameTimeStamp.minus(lastFrameTimeStamp).inWholeNanoseconds.toDouble())).toString()
+                if(frameCounter.length > 4) {
+                    frameCounter = frameCounter.slice(0..4)
+                }
+                fpsCounter.value = frameCounter
                 lastFrameTimeStamp = newFrameTimeStamp
                 shouldSleep = true
             }
@@ -50,7 +54,7 @@ class Alesia(val fileParser: FileParser) {
     }
 
     var shouldSleep = false
-    var clockStart = currentNanoTime()
+    var clockStart = Clock.System.now()
     var speedMode = false
 
     init {
@@ -73,6 +77,7 @@ class Alesia(val fileParser: FileParser) {
         if(savedRam != null) {
            memory.loadRam(savedRam)
         }
+        clockStart = Clock.System.now()
 
         while (true) {
             cpu.tick()
@@ -86,8 +91,8 @@ class Alesia(val fileParser: FileParser) {
                 memory.set(0xff02u, 0u)
             }
             if (shouldSleep && !speedMode) {
-                val clockEnd = currentNanoTime()
-                val sleepDuration = 16_000_000 -(clockEnd - clockStart)
+                val clockEnd = Clock.System.now()
+                val sleepDuration = (16_600_000 -(clockEnd.minus(clockStart).inWholeNanoseconds)) / 1_000_000
                 if ( sleepDuration> 0){
                     delay(sleepDuration)
                 } else {
@@ -95,7 +100,6 @@ class Alesia(val fileParser: FileParser) {
                     delay(1)
                 }
                 clockStart = clockEnd
-                delay(1)
                 shouldSleep = false
             }
         }

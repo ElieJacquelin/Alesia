@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.CanvasBasedWindow
+import compose.Gameboy
 import io.Joypad
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
