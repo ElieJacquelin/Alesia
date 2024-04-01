@@ -1,6 +1,5 @@
 package com.alesia.emulator.launcher
 
-import Alesia
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -10,45 +9,49 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.alesia.emulator.AndroidFileParser
+import androidx.lifecycle.viewmodel.compose.viewModel
 import compose.Gameboy
 
-@OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 @Composable
-fun LauncherScreen(fileParser: AndroidFileParser) {
-    var isRunning by remember { mutableStateOf(false) }
-    val alesia = remember { Alesia(fileParser) }
-    val frame = alesia.frameBitmap.collectAsState(ByteArray(160 * 144 * 4))
+fun LauncherScreen(viewModel: GameBoyViewModel = viewModel(factory = GameBoyViewModel.Factory)) {
+    val uiState by viewModel.uiState.collectAsState()
+    val frame by viewModel.frame.collectAsState(ByteArray(160 * 144 * 4))
 
-    Column(Modifier.fillMaxSize().background(Color.LightGray), Arrangement.spacedBy(5.dp)) {
-        val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            val romUri = it.data?.data ?: return@rememberLauncherForActivityResult
-            fileParser.loadRomFromUri(romUri)
-            isRunning = true
-        }
-        if(!isRunning) {
-            Button(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                        .apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            setType("*/*")
-                        }
-                    launcher.launch(intent)
+    val chooseRomLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val romUri = it.data?.data ?: return@rememberLauncherForActivityResult
+        viewModel.onRomChosen(romUri)
+    }
+    when(uiState) {
+        GameBoyViewModel.UIState.Initial, GameBoyViewModel.UIState.ChooseRom ->
+            Column(Modifier.fillMaxSize().background(Color.LightGray), Arrangement.spacedBy(5.dp)) {
+                Button(
+                    onClick = {
+                        viewModel.onChooseRom()
+
+                    }
+                ) {
+                    Text("Load ROM")
                 }
-            ) {
-                Text("Load ROM")
-            }
-        } else {
-            LaunchedEffect(true) {
-                alesia.runRom()
+
+                if(uiState == GameBoyViewModel.UIState.ChooseRom) {
+                    SideEffect {
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                            .apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                setType("*/*")
+                            }
+                        chooseRomLauncher.launch(intent)
+                    }
+                }
             }
 
-            Gameboy(frame = frame.value)
-        }
+        GameBoyViewModel.UIState.Running -> Gameboy(frame = frame)
     }
 }
