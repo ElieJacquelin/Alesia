@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.alesia.emulator.AndroidFileParser
+import io.Joypad
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,15 +16,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
-class GameBoyViewModel(private val fileParser: AndroidFileParser, private val alesia: Alesia): ViewModel() {
+class GameBoyViewModel(private val fileParser: AndroidFileParser, private val alesia: Alesia) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UIState.Initial)
     val uiState = _uiState.asStateFlow()
     val frame = alesia.frameBitmap
 
     fun onChooseRom() {
-       _uiState.value = UIState.ChooseRom
+        _uiState.value = UIState.ChooseRom
     }
+
     fun onRomChosen(romUri: Uri) {
         fileParser.loadRomFromUri(romUri)
         _uiState.value = UIState.Running
@@ -32,6 +34,34 @@ class GameBoyViewModel(private val fileParser: AndroidFileParser, private val al
                 alesia.runRom()
             }
         }
+    }
+
+    fun onDirectionPadChanged(directions: Array<Pair<PadDirection, Boolean>>) {
+        for (direction in directions) {
+            val (padDirection, pressed) = direction
+            val key = when (padDirection) {
+                PadDirection.Up -> Joypad.Key.Up
+                PadDirection.Down -> Joypad.Key.Down
+                PadDirection.Left -> Joypad.Key.Left
+                PadDirection.Right -> Joypad.Key.Right
+            }
+            alesia.handleKeyEvent(key, pressed)
+        }
+    }
+
+    fun onButtonChanged(button: Button, pressed: Boolean) {
+        if (button == Button.FAST_FORWARD) {
+            alesia.triggerSpeedMode(pressed)
+            return
+        }
+        val key = when (button) {
+            Button.A -> Joypad.Key.A
+            Button.B -> Joypad.Key.B
+            Button.SELECT -> Joypad.Key.Select
+            Button.START -> Joypad.Key.Start
+            Button.FAST_FORWARD -> throw Throwable("Unexpected fast forward button")
+        }
+        alesia.handleKeyEvent(key, pressed)
     }
 
     enum class UIState {

@@ -52,6 +52,9 @@ fun LauncherScreen(viewModel: GameBoyViewModel = viewModel(factory = GameBoyView
                 }
             }
 
-        GameBoyViewModel.UIState.Running -> Gameboy(frame = frame)
+        GameBoyViewModel.UIState.Running -> Gameboy(frame = frame,
+            onDirectionChange = {directions -> viewModel.onDirectionPadChanged(directions)},
+            onButtonChange = {button, pressed -> viewModel.onButtonChanged(button, pressed) }
+        )
     }
 }
