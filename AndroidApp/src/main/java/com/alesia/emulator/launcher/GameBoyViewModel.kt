@@ -64,6 +64,14 @@ class GameBoyViewModel(private val fileParser: AndroidFileParser, private val al
         alesia.handleKeyEvent(key, pressed)
     }
 
+    fun onScreenStopped() {
+        // App is being stopped, stop the rom to store the save to disk
+        // OnCleared() isn't called when the user backgrounds the app and removes it from recent, so it's not reliable enough
+        if(uiState.value == UIState.Running) {
+            alesia.stopRom()
+        }
+    }
+
     enum class UIState {
         Initial, ChooseRom, Running
     }

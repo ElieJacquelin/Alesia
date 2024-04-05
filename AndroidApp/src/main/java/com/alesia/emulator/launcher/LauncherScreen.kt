@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import compose.Gameboy
 
@@ -52,9 +53,17 @@ fun LauncherScreen(viewModel: GameBoyViewModel = viewModel(factory = GameBoyView
                 }
             }
 
-        GameBoyViewModel.UIState.Running -> Gameboy(frame = frame,
-            onDirectionChange = {directions -> viewModel.onDirectionPadChanged(directions)},
-            onButtonChange = {button, pressed -> viewModel.onButtonChanged(button, pressed) }
-        )
+        GameBoyViewModel.UIState.Running -> {
+            Gameboy(frame = frame,
+                onDirectionChange = {directions -> viewModel.onDirectionPadChanged(directions)},
+                onButtonChange = {button, pressed -> viewModel.onButtonChanged(button, pressed) }
+            )
+
+            LifecycleStartEffect {
+                onStopOrDispose {
+                    viewModel.onScreenStopped()
+                }
+            }
+        }
     }
 }
