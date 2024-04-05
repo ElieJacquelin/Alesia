@@ -46,7 +46,7 @@ fun main() = application {
     Window(
         onCloseRequest = {
             emulatorScope.cancel()
-            alesia.stopRom()
+            alesia.pauseRom()
             exitApplication()
         },
         title = "Alesia",

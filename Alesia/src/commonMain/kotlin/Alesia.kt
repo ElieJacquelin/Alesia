@@ -56,18 +56,23 @@ class Alesia(val fileParser: FileParser) {
     var shouldSleep = false
     var clockStart = Clock.System.now()
     var speedMode = false
+    var isPaused = false
 
     init {
 
     }
-
-    fun stopRom() {
+    fun pauseRom() {
         val saveData = memory.dumpRam()
         if (saveData.isEmpty()) {
             // Prevent saving files for cartridges which does not have battery
             return
         }
         fileParser.writeSave(saveData)
+        isPaused = true
+    }
+
+    fun unPauseRom() {
+        isPaused = false
     }
 
     suspend fun runRom() {
@@ -102,11 +107,16 @@ class Alesia(val fileParser: FileParser) {
                 clockStart = clockEnd
                 shouldSleep = false
             }
+            handlePauseIfNeeded()
         }
 
     }
 
-
+    private suspend fun handlePauseIfNeeded() {
+        while (isPaused) {
+            delay(10)
+        }
+    }
 
 
     fun handleKeyEvent(key: Joypad.Key, pressed: Boolean) {

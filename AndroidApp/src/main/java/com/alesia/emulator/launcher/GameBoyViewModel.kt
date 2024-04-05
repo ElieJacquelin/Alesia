@@ -65,10 +65,17 @@ class GameBoyViewModel(private val fileParser: AndroidFileParser, private val al
     }
 
     fun onScreenStopped() {
-        // App is being stopped, stop the rom to store the save to disk
+        // App is being stopped, pause the rom to store the save to disk
         // OnCleared() isn't called when the user backgrounds the app and removes it from recent, so it's not reliable enough
         if(uiState.value == UIState.Running) {
-            alesia.stopRom()
+            alesia.pauseRom()
+        }
+    }
+
+    fun onScreenStarted() {
+        // App is being started, we restart the emulator if it being paused
+        if(alesia.isPaused) {
+            alesia.unPauseRom()
         }
     }
 

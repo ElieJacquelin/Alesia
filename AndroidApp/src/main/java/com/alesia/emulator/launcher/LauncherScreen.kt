@@ -60,6 +60,7 @@ fun LauncherScreen(viewModel: GameBoyViewModel = viewModel(factory = GameBoyView
             )
 
             LifecycleStartEffect {
+                viewModel.onScreenStarted()
                 onStopOrDispose {
                     viewModel.onScreenStopped()
                 }
