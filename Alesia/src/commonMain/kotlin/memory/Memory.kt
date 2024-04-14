@@ -62,33 +62,37 @@ open class Memory(val joypad: Joypad = Joypad(), val disableWritingToRom: Boolea
     }
 
     fun get(address: UShort, isGPU: Boolean = false): UByte {
-        return when(address) {
-            in 0x0000u..0x7FFFu -> mbc.get(address) // Cartridge ROM
-            in 0x8000u..0x9FFFu -> { // VRAM
+        // Performance: Find the correct memory space based on the first nibble instead of comparing the whole range
+        val memoryIndex = address.and(0xF000u).toUInt()
+        return when(memoryIndex) {
+            0x0000u, 0x1000u, 0x2000u, 0x3000u, 0x4000u, 0x5000u, 0x6000u, 0x7000u -> mbc.get(address) // Cartridge ROM
+            0x8000u, 0x9000u -> { // VRAM
                 if(!isGPU && isVRAMLocked && !DISABLE_MEMORY_LOCK) {
                     0xFFu
                 } else {
                     vram[((address - 0x8000u).toInt())]
                 }
             }
-            in 0xA000u..0xBFFFu -> mbc.get(address) // Cartridge RAM
-            in 0xC000u..0xDFFFu -> wram[(address - 0xC000u).toInt()] // Work RAM
-            in 0xE000u..0xFDFFu -> wram[(address - 0xE000u).toInt()] // Echo
-            in 0xFE00u..0xFE9Fu -> { // OAM
-                if(!isGPU && isOAMLocked && !DISABLE_MEMORY_LOCK) {
-                    0xFFu
+            0xA000u, 0xB000u -> mbc.get(address) // Cartridge RAM
+            0xC000u, 0xD000u -> wram[(address - 0xC000u).toInt()] // Work RAM
+            0xE000u, 0xF000u -> {
+                return if(address <= 0xFDFFu) {
+                    wram[(address - 0xE000u).toInt()]// Echo
+                } else if(address <= 0xFE9Fu) {
+                    if(!isGPU && isOAMLocked && !DISABLE_MEMORY_LOCK) {
+                        0xFFu
+                    } else {
+                        oamAndMore[(address - 0xFE00u).toInt()]
+                    }
+                } else if(address == 0xFF00u.toUShort()) {
+                    val joypadControl = oamAndMore[0x100] and 0b0011_0000u
+                    joypad.generateJoypadValue(joypadControl)
                 } else {
-                    oamAndMore[(address - 0xFE00u).toInt()]
+                    oamAndMore[(address - 0xFE00u).toInt()] // Rest of memory
                 }
             }
-            0xFF00u.toUShort() -> { // Joypad
-                val joypadControl = oamAndMore[0x100] and 0b0011_0000u
-                return joypad.generateJoypadValue(joypadControl)
-            }
-            in 0xFEA0u..0xFFFFu -> oamAndMore[(address - 0xFE00u).toInt()] // Rest of memory
-            else -> {
-                throw throw Exception("Invalid address read in memory")
-            }
+            else -> throw throw Exception("Invalid address read in memory")
+
         }
     }
 

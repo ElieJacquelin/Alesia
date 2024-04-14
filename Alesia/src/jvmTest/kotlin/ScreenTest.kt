@@ -54,7 +54,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the sprite isn't in the current sprite list as it is above the scanline
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = emptyList()), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf()), screen.state)
     }
 
     @Test
@@ -73,7 +73,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the sprite isn't in the current sprite list as it is above the scanline
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = emptyList()), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf()), screen.state)
     }
 
     @Test
@@ -92,7 +92,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the sprite is in the current sprite list as the last line of the sprite overlaps the current line
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
     }
 
     @Test
@@ -111,7 +111,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the sprite is in the current sprite list as the last line of the sprite overlaps the current line
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
     }
 
     @Test
@@ -130,7 +130,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the sprite is in the current sprite list as the first line of the sprite overlaps the current line
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
     }
 
     @Test
@@ -149,7 +149,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the sprite is in the current sprite list as the first line of the sprite overlaps the current line
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf(Object.ObjectFromMemoryAddress(0xFE00u, memory))), screen.state)
     }
     @Test
     fun `OAM Scan finds sprite in the current line - After scanline`() {
@@ -165,7 +165,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then the sprite is not in the sprite list as the sprite is below the current scan line
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = emptyList()), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf()), screen.state)
     }
 
     @Test
@@ -187,7 +187,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then both sprites are in the list
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(Object.ObjectFromMemoryAddress(0xFE00u, memory), Object.ObjectFromMemoryAddress(0xFE04u, memory))), screen.state)
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf(Object.ObjectFromMemoryAddress(0xFE00u, memory), Object.ObjectFromMemoryAddress(0xFE04u, memory))), screen.state)
     }
 
     @Test
@@ -234,7 +234,7 @@ internal class ScreenTest {
         screen.tick()
 
         // Then both sprites are in the list and the first sprite is using tile index 0xFE instead of 0xFF
-        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = listOf(
+        assertEquals(Screen.State.OAMScan(sharedState.copy(currentLineDotCount = 1), spritesOnTheCurrentLine = mutableListOf(
             Object.ObjectFromMemoryAddress(0xFE00u, memory).copy(tileIndex = 0xFEu), Object.ObjectFromMemoryAddress(0xFE04u, memory))), screen.state)
 
     }
@@ -291,7 +291,7 @@ internal class ScreenTest {
         // Then the new state is Rendering Pixel for the next dot
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 80)
 
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList()), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = mutableListOf()), screen.state)
     }
 
     @Test
@@ -321,7 +321,7 @@ internal class ScreenTest {
         val currentLine = 12
         val originalSharedState = buildSharedState(currentLineDotCount = 80, currentLine = currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf())
 
         // When the machine ticks
         screen.tick()
@@ -356,7 +356,7 @@ internal class ScreenTest {
         // And the current dot count is not 80
         val originalSharedState = buildSharedState(currentLineDotCount = 90, frame = frame, currentLine=currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 1)
+        screen.state = Screen.State.DrawPixels(originalSharedState.copy(), spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 1)
 
         // When the machine ticks
         screen.tick()
@@ -372,7 +372,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels for the next X
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 91)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 2), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 2), screen.state)
     }
 
     @Test
@@ -395,7 +395,7 @@ internal class ScreenTest {
         // And the current dot count is not 80
         val originalSharedState = buildSharedState(currentLineDotCount = 90, frame = frame, currentLine=currentLine, backgroundFifo = backgroundFifo, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 1)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 1)
 
         // When the machine ticks twice
         screen.tick()
@@ -430,7 +430,7 @@ internal class ScreenTest {
         // And the background is disabled
         lcdControlRegister.setBgAndWindowEnabled(false)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 1)
+        screen.state = Screen.State.DrawPixels(originalSharedState.copy(), spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 1)
 
         // When the machine ticks
         screen.tick()
@@ -446,7 +446,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels for the next X
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = 91)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 2), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 2), screen.state)
     }
 
     @Test
@@ -465,7 +465,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 158)
+        screen.state = Screen.State.DrawPixels(originalSharedState.copy(), spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 158)
 
         // When the machine ticks
         screen.tick()
@@ -475,7 +475,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 1)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = emptyList(), currentXScanLine = 159), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 159), screen.state)
     }
 
     @Test
@@ -496,7 +496,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState.copy(), spritesOnTheCurrentLine = mutableListOf())
 
         // When the machine ticks
         screen.tick()
@@ -528,7 +528,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite))
+        screen.state = Screen.State.DrawPixels(originalSharedState.copy(), spritesOnTheCurrentLine = mutableListOf(sprite))
 
         // When the machine ticks 5 times
         for (i in 0..4) {
@@ -540,7 +540,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 5)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = listOf(sprite), currentXScanLine = 0), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = mutableListOf(sprite), currentXScanLine = 0), screen.state)
     }
 
     @Test
@@ -566,7 +566,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite))
+        screen.state = Screen.State.DrawPixels(originalSharedState.copy(), spritesOnTheCurrentLine = mutableListOf(sprite))
 
         // When the machine ticks 4 times
         for (i in 0..3) {
@@ -578,7 +578,7 @@ internal class ScreenTest {
 
         // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
         val expectedSharedState = originalSharedState.copy(currentLineDotCount = originalSharedState.currentLineDotCount + 4)
-        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = listOf(sprite), currentXScanLine = 0, spriteFetchingState = Screen.SpriteFetchingState(4)), screen.state)
+        assertEquals(Screen.State.DrawPixels(expectedSharedState, spritesOnTheCurrentLine = mutableListOf(sprite), currentXScanLine = 0, spriteFetchingState = Screen.SpriteFetchingState(4)), screen.state)
     }
 
     @Test
@@ -605,7 +605,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite), spriteFetchingState = spriteFetchingState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf(sprite), spriteFetchingState = spriteFetchingState)
 
         // When the machine ticks
         screen.tick()
@@ -623,7 +623,7 @@ internal class ScreenTest {
         expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
-        val expectedSpriteList = emptyList<Object>()
+        val expectedSpriteList = mutableListOf<Object>()
 
         // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
         val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
@@ -655,7 +655,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite), spriteFetchingState = spriteFetchingState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf(sprite), spriteFetchingState = spriteFetchingState)
 
         // When the machine ticks
         screen.tick()
@@ -673,7 +673,7 @@ internal class ScreenTest {
         expectedObjectFifo.add(Pixel(ColorID.ZERO, 0, 0, false))
 
         // And the sprite is removed from the list
-        val expectedSpriteList = emptyList<Object>()
+        val expectedSpriteList = mutableListOf<Object>()
 
         // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
         val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
@@ -705,7 +705,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite), spriteFetchingState = spriteFetchingState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf(sprite), spriteFetchingState = spriteFetchingState)
 
         // When the machine ticks
         screen.tick()
@@ -723,7 +723,7 @@ internal class ScreenTest {
         expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
-        val expectedSpriteList = emptyList<Object>()
+        val expectedSpriteList = mutableListOf<Object>()
 
         // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
         val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
@@ -760,7 +760,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, objectFifo = objectFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite), spriteFetchingState = spriteFetchingState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf(sprite), spriteFetchingState = spriteFetchingState)
 
         // When the machine ticks
         screen.tick()
@@ -778,7 +778,7 @@ internal class ScreenTest {
         expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
-        val expectedSpriteList = emptyList<Object>()
+        val expectedSpriteList = mutableListOf<Object>()
 
         // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
         val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
@@ -814,7 +814,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = listOf(sprite1, sprite2), spriteFetchingState = spriteFetchingState)
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf(sprite1, sprite2), spriteFetchingState = spriteFetchingState)
 
         // When the machine ticks
         screen.tick()
@@ -833,7 +833,7 @@ internal class ScreenTest {
         expectedObjectFifo.add(Pixel(ColorID.TWO, 0, 0, false))
 
         // And the sprite is removed from the list
-        val expectedSpriteList = emptyList<Object>()
+        val expectedSpriteList = mutableListOf<Object>()
 
         // And the state remains on DrawPixels for the current X, with the sprite remaining to be drawn
         val expectedSharedState = originalSharedState.copy(objectFifo = expectedObjectFifo)
@@ -874,7 +874,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo, objectFifo = objectFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf())
 
         // When the machine ticks 8 times
         for (i in 0..7) {
@@ -893,7 +893,7 @@ internal class ScreenTest {
 
 
         // And the state remains on DrawPixels for the next X
-        assertEquals( Screen.State.DrawPixels(originalSharedState.copy(currentLineDotCount = 8), spritesOnTheCurrentLine = emptyList(), currentXScanLine = 8), screen.state)
+        assertEquals( Screen.State.DrawPixels(originalSharedState.copy(currentLineDotCount = 8), spritesOnTheCurrentLine = mutableListOf(), currentXScanLine = 8), screen.state)
     }
 
     @Test
@@ -929,7 +929,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo, objectFifo = objectFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf())
 
         // When the machine ticks 8 times
         for (i in 0..7) {
@@ -980,7 +980,7 @@ internal class ScreenTest {
 
         val originalSharedState = buildSharedState(frame = frame, currentLine=currentLine, pixelFetcher = pixelFetcher, backgroundFifo = backgroundFifo, objectFifo = objectFifo)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf())
 
         // When the machine ticks 8 times
         for (i in 0..7) {
@@ -1003,7 +1003,7 @@ internal class ScreenTest {
         // Given the current dot count is at 80 (first dot of DrawPixel)
         val originalSharedState = buildSharedState(currentLineDotCount = 80)
 
-        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = emptyList())
+        screen.state = Screen.State.DrawPixels(originalSharedState, spritesOnTheCurrentLine = mutableListOf())
 
         // When a new dot is being processed
         screen.tick()
@@ -1065,10 +1065,10 @@ internal class ScreenTest {
     }
 
     @Test
-    fun `VBlank continues when current line dot count is less than 456`() {
-        // Given the current state is VBlank with 455 line dot count
-        val originalSharedState = buildSharedState(currentLineDotCount = 455)
-        screen.state = Screen.State.VerticalBlank(originalSharedState)
+    fun `VBlank continues when current line dot count is less than 455`() {
+        // Given the current state is VBlank with 454 line dot count
+        val originalSharedState = buildSharedState(currentLineDotCount = 454)
+        screen.state = Screen.State.VerticalBlank(originalSharedState.copy())
 
         // When a new dot is being processed
         screen.tick()
@@ -1079,27 +1079,27 @@ internal class ScreenTest {
     }
 
     @Test
-    fun `VBlank goes to next line once line dot count is 456`() {
-        // Given the current state is VBlank with 456 line dot count and the current line is not 153
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 152)
-        screen.state = Screen.State.VerticalBlank(originalSharedState)
+    fun `VBlank goes to next line once line dot count is 455`() {
+        // Given the current state is VBlank with 455 line dot count and the current line is not 152
+        val originalSharedState = buildSharedState(currentLineDotCount = 455, currentLine = 151)
+        screen.state = Screen.State.VerticalBlank(originalSharedState.copy())
 
         // When a new dot is being processed
         screen.tick()
 
         // Then the next state is VBlank for the next line
-        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 153)
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 152)
         assertEquals(Screen.State.VerticalBlank(expectedSharedState), screen.state)
         // And LY is updated
-        assertEquals(153.toUByte(), memory.get(0xFF44u))
+        assertEquals(152.toUByte(), memory.get(0xFF44u))
     }
 
     @Test
-    fun `VBlank goes to new frame once line dot count is 456 and last line is drawn`() {
-        // Given the current state is VBlank with 456 line dot count and the current line is 153
+    fun `VBlank goes to new frame once line dot count is 455 and last line is drawn`() {
+        // Given the current state is VBlank with 455 line dot count and the current line is 152
         // And the frame buffer is not empty
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 153, frame = List(160) { arrayListOf(Pixel(ColorID.ZERO, 0, 0 , false)) })
-        screen.state = Screen.State.VerticalBlank(originalSharedState)
+        val originalSharedState = buildSharedState(currentLineDotCount = 455, currentLine = 152, frame = List(160) { arrayListOf(Pixel(ColorID.ZERO, 0, 0 , false)) })
+        screen.state = Screen.State.VerticalBlank(originalSharedState.copy())
 
         // When a new dot is being processed
         screen.tick()
@@ -1152,10 +1152,10 @@ internal class ScreenTest {
     }
 
     @Test
-    fun `HBlank continues when current line dot count is less than 456`() {
-        // Given the current state is HBlank with 455 line dot count
-        val originalSharedState = buildSharedState(currentLineDotCount = 455)
-        screen.state = Screen.State.HorizontalBlank(originalSharedState, 203)
+    fun `HBlank continues when current line dot count is less than 455`() {
+        // Given the current state is HBlank with 454 line dot count
+        val originalSharedState = buildSharedState(currentLineDotCount = 454)
+        screen.state = Screen.State.HorizontalBlank(originalSharedState.copy(), 203)
 
         // When a new dot is being processed
         screen.tick()
@@ -1166,46 +1166,46 @@ internal class ScreenTest {
     }
 
     @Test
-    fun `HBlank goes to next line once line dot count is 456`() {
-        // Given the current state is HBlank with 456 line dot count and the current line is not 143
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 142)
+    fun `HBlank goes to next line once line dot count is 455`() {
+        // Given the current state is HBlank with 455 line dot count and the current line is not 142
+        val originalSharedState = buildSharedState(currentLineDotCount = 455, currentLine = 141)
         screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
 
         // When a new dot is being processed
         screen.tick()
 
         // Then the next state is OAMScan for the next line
-        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 143)
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 142)
         assertEquals(Screen.State.OAMScan(expectedSharedState), screen.state)
         // And LY is updated
-        assertEquals(143.toUByte(), memory.get(0xFF44u))
+        assertEquals(142.toUByte(), memory.get(0xFF44u))
     }
 
     @Test
-    fun `HBlank goes to VBlank once line dot count is 456 and last line is drawn`() {
-        // Given the current state is HBlank with 456 line dot count and the current line is 143
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
-        screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
+    fun `HBlank goes to VBlank once line dot count is 455 and last line is drawn`() {
+        // Given the current state is HBlank with 455 line dot count and the current line is 142
+        val originalSharedState = buildSharedState(currentLineDotCount = 455, currentLine = 142)
+        screen.state = Screen.State.HorizontalBlank(originalSharedState.copy(), 204)
 
         // When a new dot is being processed
         screen.tick()
 
         // Then the next state is VBlank for the next line
-        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 144)
+        val expectedSharedState = originalSharedState.copy(currentLineDotCount = 0, currentLine = 143)
         assertEquals(Screen.State.VerticalBlank(expectedSharedState), screen.state)
         // And LY is updated
-        assertEquals(144.toUByte(), memory.get(0xFF44u))
+        assertEquals(143.toUByte(), memory.get(0xFF44u))
     }
 
     @Test
     fun `LYC=LY Stat register - Set`() {
-        // Given the LYC register is set to line 144
-        memory.set(0xFF45u, 144u)
-        // And the current line is 143
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
+        // Given the LYC register is set to line 140
+        memory.set(0xFF45u, 140u)
+        // And the current line is 139
+        val originalSharedState = buildSharedState(currentLineDotCount = 455, currentLine = 139)
         screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
 
-        // When moving to line 144
+        // When moving to line 140
         screen.tick()
 
         // Then the LYC=LY State register is set
@@ -1215,14 +1215,14 @@ internal class ScreenTest {
 
     @Test
     fun `LYC=LY Stat register - Unset`() {
-        // Given the LYC register is set to line 143
-        memory.set(0xFF45u, 143u)
+        // Given the LYC register is set to line 140
+        memory.set(0xFF45u, 140u)
         memory.set(0xFF41u, 0b100u)
-        // And the current line is 143
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
+        // And the current line is 140
+        val originalSharedState = buildSharedState(currentLineDotCount = 455, currentLine = 140)
         screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
 
-        // When moving to line 144
+        // When moving to line 141
         screen.tick()
 
         // Then the LYC=LY State register is unset
@@ -1237,7 +1237,7 @@ internal class ScreenTest {
         // And the LYC=LY interrupt is set
         memory.set(0xFF41u, 0b100_0000u)
         // And the current line is 143
-        val originalSharedState = buildSharedState(currentLineDotCount = 456, currentLine = 143)
+        val originalSharedState = buildSharedState(currentLineDotCount = 455, currentLine = 143)
         screen.state = Screen.State.HorizontalBlank(originalSharedState, 204)
 
         // When moving to line 144
@@ -1280,10 +1280,11 @@ internal class ScreenTest {
     }
 
     @Test
+    @Ignore("Disabling PPU is disabled as it created unexpected side effects")
     fun `Enable PPU`() {
         // Given the screen is disabled
         val originalSharedState = buildSharedState()
-        screen.state = Screen.State.Disabled(originalSharedState)
+        screen.state = Screen.State.Disabled(originalSharedState.copy())
         // And the disable LCD bit is reset
         lcdControlRegister.setDisplay(true)
 

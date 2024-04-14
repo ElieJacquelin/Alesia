@@ -12,11 +12,12 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         data class Disabled(override val sharedState: SharedState): State()
         data class HorizontalBlank(override val sharedState: SharedState, val dotCountInStep: Int = 0): State()
         data class VerticalBlank(override val sharedState: SharedState): State()
-        data class OAMScan(override val sharedState: SharedState, val spritesOnTheCurrentLine: List<Object> = emptyList()): State()
-        data class DrawPixels(override val sharedState: SharedState, val currentXScanLine: Int = 0, val spriteFetchingState: SpriteFetchingState = SpriteFetchingState(), val spritesOnTheCurrentLine: List<Object>): State()
+        data class OAMScan(override val sharedState: SharedState, val spritesOnTheCurrentLine: MutableList<Object> = mutableListOf()): State()
+        data class DrawPixels(override val sharedState: SharedState, val currentXScanLine: Int = 0, val spriteFetchingState: SpriteFetchingState = SpriteFetchingState(), val spritesOnTheCurrentLine: MutableList<Object>): State()
     }
 
-    internal data class SharedState(val currentLineDotCount: Int, val currentLine: Int, val frame: List<ArrayList<Pixel>>, val backgroundFifo: ArrayDeque<Pixel>, val objectFifo: ArrayDeque<Pixel>, val pixelFetcher: PixelFetcher)
+    // Performance: The fields are var to avoid having to do copy() between each step
+    internal data class SharedState(var currentLineDotCount: Int, var currentLine: Int, var frame: List<ArrayList<Pixel>>, var backgroundFifo: ArrayDeque<Pixel>, var objectFifo: ArrayDeque<Pixel>, var pixelFetcher: PixelFetcher)
 
     internal data class SpriteFetchingState(val fetcherAdvancementDotCount: Int = 0)
 
@@ -36,7 +37,11 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
     private fun enablePPU() {
         controlRegister.setDisplay(true)
         // Start a new frame
-        this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
+        state.sharedState.currentLine = 0
+        state.sharedState.currentLineDotCount = 0
+        state.sharedState.frame = List(160) { ArrayList() }
+        this.state = State.OAMScan(state.sharedState)
+
         // Reset LY counter
         updateLYCounter(0u)
     }
@@ -78,22 +83,22 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                 } else {
                     sprite
                 }
-            }
+            }.toMutableList()
 
             setStatMode(state)
             triggerStatInterruptIfNeeded()
             memory.lockOAM()
 
-            val newSharedState = state.sharedState.copy(currentLineDotCount = 1)
-            this.state = State.OAMScan(newSharedState, spritesOnTheCurrentLine = spritesOnTheScanLine)
+            state.sharedState.currentLineDotCount = 1
+            this.state = State.OAMScan(state.sharedState, spritesOnTheCurrentLine = spritesOnTheScanLine)
             return
         }
-        val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
+        state.sharedState.currentLineDotCount += 1
         // The OAM scan mode is meant to last 80 dots before moving to the next mode
         if (currentLineDotCount == 79) {
-            this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
+            this.state = State.DrawPixels(state.sharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
         } else {
-            this.state = State.OAMScan(newSharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
+            this.state = State.OAMScan(state.sharedState, spritesOnTheCurrentLine = state.spritesOnTheCurrentLine)
         }
     }
 
@@ -110,15 +115,15 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             memory.lockVRAM()
         }
 
-        val spriteList = state.spritesOnTheCurrentLine.toMutableList()
+        val spriteList = state.spritesOnTheCurrentLine
         val spritesOnTheCurrentXCoordinate: List<Object> = spriteList.filter { sprite -> sprite.xPos - 8 == state.currentXScanLine }
         if(controlRegister.getSpriteEnabled() && spritesOnTheCurrentXCoordinate.isNotEmpty()) {
             // Wait for the pixel fetcher to start having enough pixels in the queue
             val (spriteFetchingDotCount) = state.spriteFetchingState
             if (pixelFetcher.state !is PixelFetcher.State.Push && backgroundFifo.isEmpty() && spriteFetchingDotCount == 0) {
                 pixelFetcher.tick()
-                val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
-                this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
+                state.sharedState.currentLineDotCount += 1
+                this.state = State.DrawPixels(state.sharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
                 return
             }
 
@@ -128,9 +133,9 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                     pixelFetcher.tick()
                     // Sprite abortion may happen here
                 }
-                val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
+                state.sharedState.currentLineDotCount += 1
                 val newSpriteFetchingState = SpriteFetchingState(fetcherAdvancementDotCount = spriteFetchingDotCount + 1)
-                this.state = State.DrawPixels(newSharedState, currentXScanLine = state.currentXScanLine, spriteFetchingState = newSpriteFetchingState, spritesOnTheCurrentLine = spriteList)
+                this.state = State.DrawPixels(state.sharedState, currentXScanLine = state.currentXScanLine, spriteFetchingState = newSpriteFetchingState, spritesOnTheCurrentLine = spriteList)
                 return
             }
             // Dot count 4 looks for the lower address of the sprite tile, we skip it and handle the whole sprite the next dot
@@ -170,7 +175,8 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                     spriteList.remove(spriteToBeDrawn)
                 }
                 // Done with adding sprite pixels for the current X, we can continue with the pixel rendering
-                this.state = State.DrawPixels(state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1), spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
+                state.sharedState.currentLineDotCount += 1
+                this.state = State.DrawPixels(state.sharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = state.currentXScanLine)
                 return
             }
         }
@@ -206,14 +212,14 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
             currentLinePixels.add(pixelToBeDrawn)
         }
 
-        val newSharedState = state.sharedState.copy(currentLineDotCount = currentLineDotCount + 1)
+        state.sharedState.currentLineDotCount += 1
         if (currentLinePixels.size >= 160) {
             // The full line has been generated, we can move on to the next step
-            this.state = State.HorizontalBlank(newSharedState)
+            this.state = State.HorizontalBlank(state.sharedState)
             return
         }
         // Continue drawing pixels and reset sprite fetching state if needed
-        this.state = State.DrawPixels(newSharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = currentLinePixels.size)
+        this.state = State.DrawPixels(state.sharedState, spritesOnTheCurrentLine = spriteList, currentXScanLine = currentLinePixels.size)
     }
 
     private fun applyPaletteColorToPixel(pixel: Pixel, paletteAddress: UShort) {
@@ -309,11 +315,12 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         }
         if (state.sharedState.currentLineDotCount == 455) {
             // Reached the end of HBlank, go for the next line or VBlank
-            val newLineNumber = state.sharedState.currentLine + 1
-            val newSharedState = state.sharedState.copy(currentLineDotCount = 0, currentLine = newLineNumber)
+            state.sharedState.currentLine += 1
+            state.sharedState.currentLineDotCount = 0
+            val newSharedState = state.sharedState
             // Increment LY counter
-            updateLYCounter(newLineNumber.toUByte())
-            if (state.sharedState.currentLine == 142) {
+            updateLYCounter(state.sharedState.currentLine.toUByte())
+            if (state.sharedState.currentLine == 143) {
                 this.state = State.VerticalBlank(newSharedState)
             } else {
                 this.state = State.OAMScan(newSharedState)
@@ -322,8 +329,8 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
         }
 
         // Continue HBlank
-        val currentLintDotCount = state.sharedState.currentLineDotCount
-        this.state = State.HorizontalBlank(state.sharedState.copy(currentLineDotCount = currentLintDotCount + 1), state.dotCountInStep + 1)
+        state.sharedState.currentLineDotCount += 1
+        this.state = State.HorizontalBlank(state.sharedState, state.dotCountInStep + 1)
     }
 
     private fun updateLYCounter(newLineNumber: UByte) {
@@ -374,29 +381,33 @@ class Screen (val memory: Memory, val controlRegister: LcdControlRegister = LcdC
                 frameUpdateListener?.onFrameUpdate(completeFrame)
 
                 // Start a new frame
-                this.state = State.OAMScan(state.sharedState.copy(currentLine = 0, currentLineDotCount = 0, frame = List(160) { ArrayList() }))
+                state.sharedState.currentLine = 0
+                state.sharedState.currentLineDotCount = 0
+                state.sharedState.frame = List(160) { ArrayList() }
+                this.state = State.OAMScan(state.sharedState)
                 // Reset LY counter
                 updateLYCounter(0u)
             } else {
-                val newLineNumber = state.sharedState.currentLine + 1
-                this.state = State.VerticalBlank(state.sharedState.copy(currentLine = newLineNumber, currentLineDotCount = 0))
+                state.sharedState.currentLine += 1
+                state.sharedState.currentLineDotCount = 0
+                this.state = State.VerticalBlank(state.sharedState)
                 // Increment LY counter
-                updateLYCounter(newLineNumber.toUByte())
+                updateLYCounter(state.sharedState.currentLine.toUByte())
             }
             return
         }
 
         // Continue VBlank
-        val currentLintDotCount = state.sharedState.currentLineDotCount
-        this.state = State.VerticalBlank(state.sharedState.copy(currentLineDotCount = currentLintDotCount + 1))
+        state.sharedState.currentLineDotCount += 1
+        this.state = State.VerticalBlank(state.sharedState)
     }
 
-    private fun generateOAM(): Array<Object> {
+    private fun generateOAM(): MutableList<Object> {
         val result = mutableListOf<Object>()
         for (objectAddress in 0xFE00u..0xFE9Fu step 4) {
             result.add(Object.ObjectFromMemoryAddress(objectAddress.toUShort(), memory))
         }
-        return result.toTypedArray<Object>()
+        return result
     }
 
 

@@ -15,7 +15,7 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
         data class Push(override val sharedState: SharedState, val tileLowData: UByte, val tileHighData: UByte, val windowTile: Boolean): State()
     }
 
-    internal data class SharedState(val currentTileMapOffset: UInt, val currentLine: Int, val backgroundFiFo: ArrayDeque<Pixel>, val internalWindowLineCounter: UInt = 0u, val hasDrawnWindowThisLine: Boolean = false, val hasDroppedFirstTileScroll: Boolean = false)
+    internal data class SharedState(var currentTileMapOffset: UInt, var currentLine: Int, var backgroundFiFo: ArrayDeque<Pixel>, var internalWindowLineCounter: UInt = 0u, var hasDrawnWindowThisLine: Boolean = false, var hasDroppedFirstTileScroll: Boolean = false)
 
     internal lateinit var state: State
 
@@ -57,7 +57,8 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
                     val tileIDy = (state.sharedState.internalWindowLineCounter / 8u)
                     val tileID = memory.get((mapTile + tileIDx + (0x20u * tileIDy)).toUShort(), isGPU = true)
 
-                    this.state = State.GetTileDataLow(state.sharedState.copy(hasDrawnWindowThisLine = true), tileID, state.sharedState.currentLine, true)
+                    state.sharedState.hasDrawnWindowThisLine = true
+                    this.state = State.GetTileDataLow(state.sharedState, tileID, state.sharedState.currentLine, true)
                     return
                 }
             }
@@ -174,7 +175,9 @@ class PixelFetcher(private val controlRegister: LcdControlRegister, private val 
         backgroundFiFo.addAll(pixelRow)
         // Move to the next tile to be rendered
         val newTileMapOffset = if(state.sharedState.currentTileMapOffset == 31u) 0u else state.sharedState.currentTileMapOffset + 1u
-        val newSharedState = state.sharedState.copy(currentTileMapOffset = newTileMapOffset, hasDroppedFirstTileScroll = true)
+        state.sharedState.currentTileMapOffset = newTileMapOffset
+        state.sharedState.hasDroppedFirstTileScroll = true
+        val newSharedState = state.sharedState
 
         this.state = State.GetTile(newSharedState)
     }
