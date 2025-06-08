@@ -1,14 +1,12 @@
-import org.jetbrains.compose.ComposeExtension
-
 plugins {
     // this is necessary to avoid the plugins to be loaded multiple times
     // in each subproject's classloader
-    kotlin("jvm") apply false
-    kotlin("multiplatform") apply false
-    id("org.jetbrains.compose") apply false
-    kotlin("android") apply false
-    id("com.android.application") apply false
-    id("com.android.library") apply false
+    alias(libs.plugins.jvm) apply false
+    alias(libs.plugins.multiplatform) apply false
+    alias(libs.plugins.compose) apply false
+    alias(libs.plugins.android.kotlin) apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
 }
 
 allprojects {
@@ -19,14 +17,5 @@ allprojects {
         mavenLocal()
         maven("https://maven.pkg.jetbrains.space/kotlin/p/wasm/experimental")
         maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev")
-    }
-
-    afterEvaluate {
-        extensions.findByType(ComposeExtension::class.java)?.apply {
-            val composeCompilerVersion = project.property("compose.compiler.version") as String
-            kotlinCompilerPlugin.set(composeCompilerVersion)
-            val kotlinVersion = project.property("kotlin.version") as String
-            kotlinCompilerPluginArgs.add("suppressKotlinVersionCompatibilityCheck=$kotlinVersion")
-        }
     }
 }

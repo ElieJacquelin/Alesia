@@ -1,9 +1,8 @@
-import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("multiplatform")
-    id("org.jetbrains.compose")
+    alias(libs.plugins.multiplatform)
+    alias(libs.plugins.compose)
 }
 
 group = "me.eliej"
@@ -16,12 +15,10 @@ kotlin {
     }
 
     sourceSets {
-        val okioVersion = "3.0.0"
-
         val commonMain by getting {
             dependencies {
                 implementation(project(":Alesia"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+                implementation(libs.kotlin.coroutines)
                 implementation(compose.desktop.currentOs)
             }
         }
@@ -29,19 +26,19 @@ kotlin {
         val jvmMain by getting {
             dependencies {
 
-                implementation("com.squareup.okio:okio:$okioVersion")
+                implementation(libs.okio)
             }
         }
 
         val jvmTest by getting {
             dependencies {
-                implementation(kotlin("stdlib-common"))
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
-                implementation(kotlin("test"))
-                implementation(kotlin("test-junit"))
-                implementation("io.mockk:mockk-common:1.12.2")
-                implementation("io.mockk:mockk:1.12.2")
+                implementation(libs.kotlinStdlibCommon)
+                implementation(libs.kotlinTestCommon)
+                implementation(libs.kotlinTestAnnotationsCommon )
+                implementation(libs.kotlinTest)
+                implementation(libs.kotlinTestJunit)
+                implementation(libs.mockk)
+                implementation(libs.mockk.common)
             }
         }
     }

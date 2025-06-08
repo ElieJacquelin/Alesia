@@ -2,8 +2,8 @@ import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("multiplatform") version "1.9.23"
-    id("com.android.library")
+    alias(libs.plugins.multiplatform)
+    alias(libs.plugins.android.library)
 }
 
 group = "me.eliej"
@@ -23,23 +23,20 @@ kotlin {
     }
 
     sourceSets {
-        val okioVersion = "3.0.0"
-
         val commonMain by getting {
             dependencies {
-                implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0-RC.2")
+                implementation(libs.kotlinStdlibCommon)
+                implementation(libs.kotlin.coroutines)
+                implementation(libs.kotlin.datetime)
             }
          }
         commonTest {
             dependencies {
-                implementation(kotlin("stdlib-common"))
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
-                implementation(kotlin("test"))
-                implementation(kotlin("test-junit"))
-                implementation("io.mockk:mockk-common:1.10.3-jdk8")
+                implementation(libs.kotlinStdlibCommon)
+                implementation(libs.kotlinTestCommon)
+                implementation(libs.kotlinTestAnnotationsCommon )
+                implementation(libs.kotlinTest)
+                implementation(libs.kotlinTestJunit)
             }
         }
 
@@ -56,13 +53,13 @@ kotlin {
 
         val jvmTest by getting {
             dependencies {
-                implementation(kotlin("stdlib-common"))
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
-                implementation(kotlin("test"))
-                implementation(kotlin("test-junit"))
-                implementation("io.mockk:mockk-common:1.12.2")
-                implementation("io.mockk:mockk:1.12.2")
+                implementation(libs.kotlinStdlibCommon)
+                implementation(libs.kotlinTestCommon)
+                implementation(libs.kotlinTestAnnotationsCommon )
+                implementation(libs.kotlinTest)
+                implementation(libs.kotlinTestJunit)
+                implementation(libs.mockk)
+                implementation(libs.mockk.common)
             }
         }
 
