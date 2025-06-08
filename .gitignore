@@ -24,6 +24,8 @@
 .idea/**/gradle.xml
 .idea/**/libraries
 
+.idea/inspectionProfiles/**
+
 # Gradle and Maven with auto-import
 # When using Gradle or Maven with auto-import, you should exclude module files,
 # since they will be recreated, and may cause churn.  Uncomment if using
@@ -73,6 +75,7 @@ fabric.properties
 .gradle
 **/build/
 !src/**/build/
+.kotlin/**
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -122,6 +125,7 @@ gradle-app.setting
 /.teamcity/target
 /gradle.ipr
 /gradle.iws
+local.properties
 
 # Eclipse
 # -------
@@ -179,3 +183,5 @@ atlassian-ide-plugin.xml
 
 # oh-my-zsh gradle plugin
 .gradletasknamecache
+
+.profileconfig.json
