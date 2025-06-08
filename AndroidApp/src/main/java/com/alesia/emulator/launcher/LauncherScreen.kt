@@ -59,7 +59,7 @@ fun LauncherScreen(viewModel: GameBoyViewModel = viewModel(factory = GameBoyView
                 onButtonChange = {button, pressed -> viewModel.onButtonChanged(button, pressed) }
             )
 
-            LifecycleStartEffect {
+            LifecycleStartEffect(key1 = "emulator") {
                 viewModel.onScreenStarted()
                 onStopOrDispose {
                     viewModel.onScreenStopped()

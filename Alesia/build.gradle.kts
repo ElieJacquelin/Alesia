@@ -1,8 +1,5 @@
-import org.jetbrains.compose.compose
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-
 plugins {
-    alias(libs.plugins.multiplatform)
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
 }
 
@@ -36,7 +33,6 @@ kotlin {
                 implementation(libs.kotlinTestCommon)
                 implementation(libs.kotlinTestAnnotationsCommon )
                 implementation(libs.kotlinTest)
-                implementation(libs.kotlinTestJunit)
             }
         }
 

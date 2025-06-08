@@ -1,18 +1,16 @@
 [versions]
-activityCompose = "1.8.2"
-appcompat = "1.6.1"
-kotlin = "1.9.23"
-agp = "8.1.0"
-composeCompiler = "1.5.8"
-compose = "1.6.1"
-composeWasm = "1.6.1"
-coroutines = "1.8.0"
-datetime = "0.6.0-RC.2"
-lifecycleRuntimeCompose = "2.7.0"
-lifecycleRuntimeKtx = "2.7.0"
-mockk = "1.12.2"
-composeBom = "2023.03.00"
-okio = "3.0.0"
+activityCompose = "1.10.1"
+appcompat = "1.7.1"
+kotlin = "2.1.21"
+agp = "8.10.1"
+compose = "1.8.1"
+coroutines = "1.10.2"
+datetime = "0.6.2"
+lifecycleRuntimeCompose = "2.9.1"
+lifecycleRuntimeKtx = "2.9.1"
+mockk = "1.12.5"
+composeBom = "2025.06.00"
+okio = "3.12.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -42,9 +40,10 @@ kotlinTestJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.r
 
 [plugins]
 jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin"}
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin"}
 android-kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin"}
-compose = { id = "org.jetbrains.compose", version.ref = "compose"}
 android-application = { id = "com.android.application", version.ref = "agp"}
 android-library = { id = "com.android.library", version.ref = "agp"}
+jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "compose" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

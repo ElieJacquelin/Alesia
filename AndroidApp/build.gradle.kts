@@ -1,17 +1,18 @@
 plugins {
-    alias(libs.plugins.compose)
+    alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.android.kotlin)
     alias(libs.plugins.android.application)
 }
 
 android {
     namespace = "com.alesia.emulator"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.alesia.emulator"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 

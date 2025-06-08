@@ -42,6 +42,7 @@ val alesia = Alesia(fileParser)
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() = application {
     val emulatorScope = rememberCoroutineScope()
+    val counter by alesia.fpsCounter.collectAsState()
 
     Window(
         onCloseRequest = {
@@ -96,7 +97,7 @@ fun main() = application {
                     }) {
                     Text("Start")
                 }
-
+                Text("${counter} FPS")
                 Gameboy(alesia)
             }
         }
